@@ -706,6 +706,50 @@ document.addEventListener('DOMContentLoaded', function() {
     carousel.addEventListener('mouseleave', startAutoScroll);
 });
 
+.reservation-btn {
+  background: linear-gradient(145deg, #d4af37 0%, #a78b2a 100%);
+  color: #000 !important;
+  font-weight: 700;
+  border: none;
+  border-radius: 0 !important; /* Changed from 8px to 0 */
+  padding: 1.25rem 2.5rem;
+  letter-spacing: 0.1em;
+  position: relative;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 5px 15px rgba(167, 139, 42, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2),
+    inset 0 -4px 8px rgba(167, 139, 42, 0.8);
+  transition: all 0.3s ease;
+  font-family: 'Playfair Display', serif;
+  transform-style: preserve-3d;
+}
+
+.reservation-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, #a78b2a 0%, #d4af37 100%);
+  border-radius: 0 !important; /* Changed from 8px to 0 */
+  z-index: -1;
+  transform: translateZ(-1px);
+  transition: all 0.3s ease;
+}
+
+.reservation-btn:hover {
+  transform: translateY(-3px) translateZ(0);
+  box-shadow: 
+    0 8px 25px rgba(167, 139, 42, 0.6),
+    inset 0 1px 1px rgba(255, 255, 255, 0.3),
+    inset 0 -4px 8px rgba(167, 139, 42, 1);
+}
+
+.reservation-btn:active {
+  transform: translateY(1px) translateZ(0);
+}
 </style>
 
 <!-- Luxury Loading Animation -->
@@ -766,7 +810,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         Login
                     </a>
                 <?php endif; ?>
-                <a href="pages/home.php" class="px-10 py-5 bg-gradient-to-r from-gold to-gold-light text-black hover:from-gold-light hover:to-gold transition-all duration-700 font-medium tracking-wide transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-gold/40">
+                <a href="pages/home.php" class="reservation-btn px-10 py-5 bg-gradient-to-r from-gold to-gold-light text-black hover:from-gold-light hover:to-gold transition-all duration-700 font-medium tracking-wide transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-gold/40">
                     Make a Reservation
                 </a>
             </div>
