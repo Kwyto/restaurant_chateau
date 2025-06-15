@@ -50,67 +50,79 @@ include '../../includes/header.php';
         <!-- Profile Navigation -->
         <?php include 'komponen/navigasi.php'; ?>
         
-        <!-- History Content -->
-        <div class="border border-gray-800 p-8">
-            <h2 class="text-2xl font-serif font-bold mb-6">Reservation History</h2>
-            
-            <?php if (mysqli_num_rows($reservations) > 0): ?>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-800">
-                    <thead class="bg-gray-900">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Time</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Guests</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Table</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Special Request</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-black divide-y divide-gray-800">
-                        <?php while ($reservation = mysqli_fetch_assoc($reservations)): ?>
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <?php echo date('F d, Y', strtotime($reservation['reservation_date'])); ?>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <?php echo date('g:i A', strtotime($reservation['reservation_time'])); ?>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <?php echo htmlspecialchars($reservation['guests']); ?>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <?php echo htmlspecialchars($reservation['table_number']); ?>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <?php 
-                                $status_colors = [
-                                    'pending' => 'bg-yellow-900 text-yellow-300',
-                                    'confirmed' => 'bg-blue-900 text-blue-300',
-                                    'completed' => 'bg-green-900 text-green-300',
-                                    'cancelled' => 'bg-red-900 text-red-300'
-                                ];
-                                $status_color = $status_colors[$reservation['status']] ?? 'bg-gray-900 text-gray-300';
-                                ?>
-                                <span class="px-2 py-1 text-xs rounded-full <?php echo $status_color; ?>">
-                                    <?php echo ucfirst(htmlspecialchars($reservation['status'])); ?>
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <?php echo !empty($reservation['special_request']) ? 
-                                    htmlspecialchars(substr($reservation['special_request'], 0, 30)) . '...' : 
-                                    '<span class="text-gray-500">-</span>'; ?>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <a href="view_reservation.php?id=<?php echo $reservation['id']; ?>" 
-                                   class="text-gold hover:text-gold-dark">View</a>
-                            </td>
-                        </tr>
-                        <?php endwhile; ?>
-                    </tbody>
-                </table>
-            </div>
+<!-- History Content -->
+<div class="border border-gray-800 p-8">
+    <h2 class="text-2xl font-serif font-bold mb-6">Reservation History</h2>
+    
+    <?php if (mysqli_num_rows($reservations) > 0): ?>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-800">
+            <thead class="bg-gray-900">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Time</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Guests</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Created At</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Special Occasio</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Total Amount</th>
+                </tr>
+            </thead>
+            <tbody class="bg-black divide-y divide-gray-800">
+                <?php while ($reservation = mysqli_fetch_assoc($reservations)): ?>
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <?php echo date('F d, Y', strtotime($reservation['reservation_date'])); ?>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <?php echo date('g:i A', strtotime($reservation['reservation_time'])); ?>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <?php echo htmlspecialchars($reservation['guests']); ?>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <?php echo date('M d, Y H:i', strtotime($reservation['created_at'])); ?>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <?php 
+                        $status_colors = [
+                            'pending' => 'bg-yellow-900 text-yellow-300',
+                            'confirmed' => 'bg-blue-900 text-blue-300',
+                            'completed' => 'bg-green-900 text-green-300',
+                            'cancelled' => 'bg-red-900 text-red-300'
+                        ];
+                        $status_color = $status_colors[$reservation['status']] ?? 'bg-gray-900 text-gray-300';
+                        ?>
+                        <span class="px-2 py-1 text-xs rounded-full <?php echo $status_color; ?>">
+                            <?php echo ucfirst(htmlspecialchars($reservation['status'])); ?>
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <?php echo !empty($reservation['special_occasion']) ? 
+                            htmlspecialchars($reservation['special_occasion']) : 
+                            '<span class="text-gray-500">-</span>'; ?>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right font-mono">
+                        <?php 
+                        if (!empty($reservation['total_amount'])) {
+                           
+                            echo '$' . number_format($reservation['total_amount'], 2, '.', ',');
+                        } else {
+                            echo '<span class="text-gray-500">-</span>';
+                        }
+                        ?>
+                    </td>
+                </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php else: ?>
+    <div class="text-center py-8 text-gray-400">
+        <p>No reservations found</p>
+    </div>
+    <?php endif; ?>
+</div>
             
             <?php if ($total_pages > 1): ?>
             <div class="mt-8 flex justify-between items-center">
@@ -143,12 +155,7 @@ include '../../includes/header.php';
             </div>
             <?php endif; ?>
             
-            <?php else: ?>
-            <div class="text-center py-8 text-gray-400">
-                <p>Belum ada pesanan</p>
-            </div>
-            <?php endif; ?>
-        </div>
+
     </div>
 </main>
 
