@@ -646,66 +646,6 @@ button[name="submit_testimonial"]:hover::after {
   animation: modalFadeIn 0.3s ease-out forwards;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    const carousel = document.getElementById('testimonialCarousel');
-    const dotsContainer = document.getElementById('testimonialDots');
-    const cards = document.querySelectorAll('.testimonial-card');
-    const cardCount = cards.length / 2; // Karena ada duplikat
-    let currentIndex = 0;
-    let autoScrollInterval;
-
-    // Create dots
-    for (let i = 0; i < cardCount; i++) {
-        const dot = document.createElement('div');
-        dot.classList.add('carousel-dot');
-        if (i === 0) dot.classList.add('active');
-        dot.addEventListener('click', () => goToSlide(i));
-        dotsContainer.appendChild(dot);
-    }
-
-    // Auto scroll function
-    function startAutoScroll() {
-        autoScrollInterval = setInterval(() => {
-            currentIndex = (currentIndex + 1) % cardCount;
-            updateCarousel();
-        }, 4000);
-    }
-
-    function updateCarousel() {
-        const scrollPosition = currentIndex * cards[0].offsetWidth;
-        carousel.scrollTo({
-            left: scrollPosition,
-            behavior: 'smooth'
-        });
-
-        // Update active dot
-        document.querySelectorAll('.carousel-dot').forEach((dot, index) => {
-            dot.classList.toggle('active', index === currentIndex);
-        });
-    }
-
-    function goToSlide(index) {
-        currentIndex = index;
-        updateCarousel();
-        resetAutoScroll();
-    }
-
-    function resetAutoScroll() {
-        clearInterval(autoScrollInterval);
-        startAutoScroll();
-    }
-
-    // Start auto scroll
-    startAutoScroll();
-
-    // Pause on hover
-    carousel.addEventListener('mouseenter', () => {
-        clearInterval(autoScrollInterval);
-    });
-
-    carousel.addEventListener('mouseleave', startAutoScroll);
-});
-
 .reservation-btn {
   background: linear-gradient(145deg, #d4af37 0%, #a78b2a 100%);
   color: #000 !important;
