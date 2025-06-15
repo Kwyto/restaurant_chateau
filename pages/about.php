@@ -76,7 +76,7 @@ require_once __DIR__ . '/../includes/config.php';
                 <div class="grid md:grid-cols-2 gap-12 items-center">
                     <div>
                         <p class="text-gray-300 leading-relaxed mb-6">
-                            Founded in 2025, Château Restaurant Web Platform revolutionizes the dining experience by seamlessly connecting food enthusiasts with exceptional culinary experiences. Our platform combines traditional hospitality with modern technology, offering an intuitive reservation system and comprehensive menu exploration.
+                            Founded in 1975, Château Restaurant Web Platform revolutionizes the dining experience by seamlessly connecting food enthusiasts with exceptional culinary experiences. Our platform combines traditional hospitality with modern technology, offering an intuitive reservation system and comprehensive menu exploration.
                         </p>
                         <p class="text-gray-300 leading-relaxed">
                             What began as a simple booking system has evolved into a complete digital dining companion, featuring real-time table availability, personalized dining preferences, and exclusive member benefits.
