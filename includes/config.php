@@ -54,22 +54,24 @@ function getUserReservations($conn, $userId) {
     return mysqli_stmt_get_result($stmt);
 }
 
-// Get menu items
-function getMenuItems($conn, $category = null) {
-    $query = "SELECT * FROM menu_items";
-    if ($category) {
-        $query .= " WHERE category = ?";
-        $stmt = mysqli_prepare($conn, $query);
-        mysqli_stmt_bind_param($stmt, "s", $category);
-    } else {
-        $stmt = mysqli_prepare($conn, $query);
-    }
-    mysqli_stmt_execute($stmt);
-    return mysqli_stmt_get_result($stmt);
-}
-
 // Generate random reservation number
 function generateReservationNumber() {
     return 'RES-' . strtoupper(substr(md5(uniqid()), 0, 8));
 }
+
+// Untuk menampilkan menu
+function getMenuItems($conn, $category = null) {
+    if ($category) {
+        $query = "SELECT * FROM menu_items WHERE category = ?";
+        $stmt = mysqli_prepare($conn, $query);
+        mysqli_stmt_bind_param($stmt, "s", $category);
+    } else {
+        $query = "SELECT * FROM menu_items";
+        $stmt = mysqli_prepare($conn, $query);
+    }
+    
+    mysqli_stmt_execute($stmt);
+    return mysqli_stmt_get_result($stmt);
+}
+
 ?>
