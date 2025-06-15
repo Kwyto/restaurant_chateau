@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
     }
     
     // Create upload directory if it doesn't exist
-    $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/restaurant/uploads/profiles/';
+    $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/profiles/';
     if (!file_exists($upload_dir)) {
         mkdir($upload_dir, 0777, true);
     }
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
     
     if (move_uploaded_file($file['tmp_name'], $filepath)) {
         // Update database with new photo path - use web-accessible path
-        $relative_path = '/restaurant/uploads/profiles/' . $filename;
+        $relative_path = '../uploads/profiles/' . $filename;
         $query = "UPDATE users SET profile_photo = ? WHERE id = ?";
         $stmt = mysqli_prepare($conn, $query);
         mysqli_stmt_bind_param($stmt, "si", $relative_path, $user_id);

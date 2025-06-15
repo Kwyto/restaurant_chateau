@@ -1,8 +1,12 @@
 <?php
 include 'includes/config.php';
+include 'includes/testimonials.php';
 
 // Get featured menu items
 $featuredItems = getMenuItems($conn, 'main');
+
+// Get testimonials
+$testimonials = getTestimonials($conn);
 
 // Check if user is logged in and get their data if needed
 $userData = null;
@@ -11,6 +15,25 @@ if (isset($_SESSION['user_id'])) {
     $result = mysqli_query($conn, $query);
     $userData = mysqli_fetch_assoc($result);
 }
+
+// Handle testimonial submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_testimonial'])) {
+    if (!isset($_SESSION['user_id'])) {
+        $_SESSION['error'] = "Please login to submit a testimonial";
+    } else {
+        $rating = $_POST['rating'];
+        $comment = $_POST['comment'];
+        
+        if (addTestimonial($conn, $_SESSION['user_id'], $rating, $comment)) {
+            $_SESSION['success'] = "Thank you for your testimonial!";
+            header("Location: ".$_SERVER['PHP_SELF']);
+            exit();
+        } else {
+            $_SESSION['error'] = "Failed to submit testimonial";
+        }
+    }
+}
+
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -453,6 +476,236 @@ if (isset($_SESSION['user_id'])) {
         font-size: 2.5rem;
     }
 }
+
+/* Testimonial Button Style */
+#openTestimonialModal {
+  background: linear-gradient(135deg, #D4AF37 0%, #F9D423 100%);
+  color: #000;
+  font-weight: 600;
+  border: none;
+  border-radius: 9999px;
+  box-shadow: 0 4px 6px rgba(212, 175, 55, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+#openTestimonialModal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(212, 175, 55, 0.4);
+}
+
+#openTestimonialModal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: 0.5s;
+}
+
+#openTestimonialModal:hover::before {
+  left: 100%;
+}
+
+/* Testimonial Modal Style */
+#testimonialModal {
+  backdrop-filter: blur(8px);
+}
+
+#testimonialModal > div {
+  background: linear-gradient(145deg, #111 0%, #000 100%);
+  border: 1px solid #D4AF37;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+#testimonialModal h3 {
+  text-shadow: 0 2px 4px rgba(212, 175, 55, 0.3);
+  position: relative;
+  padding-bottom: 10px;
+}
+
+#testimonialModal h3::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+}
+
+/* Star Rating Style */
+input[name="rating"]:checked + label svg {
+  fill: #D4AF37;
+  stroke: #D4AF37;
+}
+
+label[for^="star"]:hover svg {
+  fill: #D4AF37;
+  stroke: #D4AF37;
+  transform: scale(1.1);
+  transition: all 0.2s ease;
+}
+
+/* Textarea Style */
+#comment {
+  background: rgba(20, 20, 20, 0.8);
+  transition: all 0.3s ease;
+}
+
+#comment:focus {
+  border-color: #D4AF37;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+}
+
+/* Submit Button Style */
+button[name="submit_testimonial"] {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+button[name="submit_testimonial"]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: 0.5s;
+}
+
+button[name="submit_testimonial"]:hover::after {
+  left: 100%;
+}
+
+/* Close Button Style */
+#closeTestimonialModal {
+  transition: all 0.3s ease;
+}
+
+#closeTestimonialModal:hover {
+  transform: rotate(90deg);
+}
+
+/* Login Button Style in Modal */
+#testimonialModal a {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+#testimonialModal a:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(212, 175, 55, 0.4);
+}
+
+#testimonialModal a::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: 0.5s;
+}
+
+#testimonialModal a:hover::before {
+  left: 100%;
+}
+
+/* Success/Error Messages */
+.bg-red-900 {
+  background: rgba(127, 29, 29, 0.8) !important;
+  border-left: 4px solid #FECACA;
+}
+
+.bg-green-900 {
+  background: rgba(6, 78, 59, 0.8) !important;
+  border-left: 4px solid #A7F3D0;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#testimonialModal > div {
+  animation: modalFadeIn 0.3s ease-out forwards;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const carousel = document.getElementById('testimonialCarousel');
+    const dotsContainer = document.getElementById('testimonialDots');
+    const cards = document.querySelectorAll('.testimonial-card');
+    const cardCount = cards.length / 2; // Karena ada duplikat
+    let currentIndex = 0;
+    let autoScrollInterval;
+
+    // Create dots
+    for (let i = 0; i < cardCount; i++) {
+        const dot = document.createElement('div');
+        dot.classList.add('carousel-dot');
+        if (i === 0) dot.classList.add('active');
+        dot.addEventListener('click', () => goToSlide(i));
+        dotsContainer.appendChild(dot);
+    }
+
+    // Auto scroll function
+    function startAutoScroll() {
+        autoScrollInterval = setInterval(() => {
+            currentIndex = (currentIndex + 1) % cardCount;
+            updateCarousel();
+        }, 4000);
+    }
+
+    function updateCarousel() {
+        const scrollPosition = currentIndex * cards[0].offsetWidth;
+        carousel.scrollTo({
+            left: scrollPosition,
+            behavior: 'smooth'
+        });
+
+        // Update active dot
+        document.querySelectorAll('.carousel-dot').forEach((dot, index) => {
+            dot.classList.toggle('active', index === currentIndex);
+        });
+    }
+
+    function goToSlide(index) {
+        currentIndex = index;
+        updateCarousel();
+        resetAutoScroll();
+    }
+
+    function resetAutoScroll() {
+        clearInterval(autoScrollInterval);
+        startAutoScroll();
+    }
+
+    // Start auto scroll
+    startAutoScroll();
+
+    // Pause on hover
+    carousel.addEventListener('mouseenter', () => {
+        clearInterval(autoScrollInterval);
+    });
+
+    carousel.addEventListener('mouseleave', startAutoScroll);
+});
+
 </style>
 
 <!-- Luxury Loading Animation -->
@@ -611,60 +864,120 @@ if (isset($_SESSION['user_id'])) {
     </section>
 
     <!-- Luxury Testimonials Section -->
-    <section class="py-32 px-4 max-w-7xl mx-auto section-luxury rounded-3xl my-16 relative overflow-hidden">
-        <div class="luxury-pattern"></div>
-        <h2 class="text-5xl font-serif font-black mb-16 text-center glow-text gold-emboss" data-aos="fade-up">What Our Guests Say</h2>
-        
-        <div class="grid md:grid-cols-3 gap-10 relative z-10">
-            <div class="testimonial-luxury p-10 rounded-2xl border border-gray-800 hover:border-gold transition-all duration-700" data-aos="fade-up" data-aos-delay="100">
-                <div class="flex items-center mb-6">
-                    <div class="w-16 h-16 rounded-full bg-gradient-to-r from-gold to-gold-light flex items-center justify-center text-black font-bold mr-4 text-xl">JD</div>
-                    <div>
-                        <h4 class="font-semibold text-lg">John Doe</h4>
-                        <div class="flex text-gold mt-1">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                        </div>
+<section class="py-32 px-4 max-w-7xl mx-auto section-luxury rounded-3xl my-16 relative overflow-hidden">
+    <div class="luxury-pattern"></div>
+<h2 class="text-5xl font-serif font-black mb-16 text-center glow-text gold-emboss">What Our Guests Say</h2>
+
+<!-- Testimonial Carousel Container -->
+<div class="relative overflow-hidden py-10">
+    <div class="testimonial-carousel flex gap-8 overflow-x-auto snap-x snap-mandatory scroll-smooth py-4" 
+         id="testimonialCarousel">
+        <!-- Testimonial Cards -->
+        <?php foreach (array_merge($testimonials, $testimonials) as $testimonial): ?>
+        <div class="testimonial-card flex-shrink-0 w-80 md:w-96 p-8 rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 hover:border-gold transition-all snap-center">
+            <div class="flex items-center mb-6">
+                <div class="w-14 h-14 rounded-full bg-gradient-to-r from-gold to-gold-light flex items-center justify-center text-black font-bold mr-4">
+                    <?php echo substr($testimonial['first_name'], 0, 1) . substr($testimonial['last_name'], 0, 1); ?>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-lg text-white">
+                        <?php echo htmlspecialchars($testimonial['first_name'] . ' ' . $testimonial['last_name']); ?>
+                    </h4>
+                    <div class="flex text-gold mt-1">
+                        <?php for ($i = 0; $i < 5; $i++): ?>
+                            <svg class="w-5 h-5" fill="<?php echo $i < $testimonial['rating'] ? 'currentColor' : 'none'; ?>" 
+                                 stroke="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                        <?php endfor; ?>
                     </div>
                 </div>
-                <p class="text-gray-300 leading-relaxed">"The most exquisite dining experience I've ever had. Every dish was a masterpiece, and the service was impeccable."</p>
             </div>
-            
-            <div class="testimonial-luxury p-10 rounded-2xl border border-gray-800 hover:border-gold transition-all duration-700" data-aos="fade-up" data-aos-delay="200">
-                <div class="flex items-center mb-6">
-                    <div class="w-16 h-16 rounded-full bg-gradient-to-r from-gold to-gold-light flex items-center justify-center text-black font-bold mr-4 text-xl">AS</div>
-                    <div>
-                        <h4 class="font-semibold text-lg">Amanda Smith</h4>
-                        <div class="flex text-gold mt-1">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                        </div>
-                    </div>
-                </div>
-                <p class="text-gray-300 leading-relaxed">"Perfect for our anniversary dinner. The ambiance, food, and attention to detail made it a night we'll never forget."</p>
-            </div>
-            
-            <div class="testimonial-luxury p-10 rounded-2xl border border-gray-800 hover:border-gold transition-all duration-700" data-aos="fade-up" data-aos-delay="300">
-                <div class="flex items-center mb-6">
-                    <div class="w-16 h-16 rounded-full bg-gradient-to-r from-gold to-gold-light flex items-center justify-center text-black font-bold mr-4 text-xl">MR</div>
-                    <div>
-                        <h4 class="font-semibold text-lg">Michael Roberts</h4>
-                        <div class="flex text-gold mt-1">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                        </div>
-                    </div>
-                </div>
-                <p class="text-gray-300 leading-relaxed">"The wine pairing was exceptional, and the sommelier's knowledge was impressive. A truly luxurious experience."</p>
-            </div>
+            <p class="text-gray-300 italic mb-4">
+                "<?php echo htmlspecialchars($testimonial['comment']); ?>"
+            </p>
+            <p class="text-gray-500 text-sm">
+                <?php echo date('F j, Y', strtotime($testimonial['created_at'])); ?>
+            </p>
         </div>
-    </section>
+        <?php endforeach; ?>
+    </div>
+
+    <!-- Navigation Dots -->
+    <div class="flex justify-center mt-8 space-x-2" id="testimonialDots"></div>
+</div>
+    <!-- Add Testimonial Button -->
+    <div class="text-center mt-16 relative z-10">
+        <button id="openTestimonialModal" class="px-8 py-4 bg-gradient-to-r from-gold to-gold-light text-black font-medium rounded-full hover:shadow-lg hover:shadow-gold/40 transition-all duration-300">
+            Share Your Experience
+        </button>
+    </div>
+</section>
+
+<!-- Testimonial Modal -->
+<div id="testimonialModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
+    <div class="bg-gradient-to-br from-gray-900 to-gray-800 p-10 rounded-3xl max-w-2xl w-full relative border border-gold">
+        <button id="closeTestimonialModal" class="absolute top-6 right-6 text-gold hover:text-gold-light">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        
+        <h3 class="text-3xl font-serif font-bold mb-8 text-gold text-center">Share Your Experience</h3>
+        
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="bg-red-900 text-white p-4 mb-6 rounded-lg">
+                <?php echo $_SESSION['error']; unset($_SESSION['error']); ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if (isset($_SESSION['success'])): ?>
+            <div class="bg-green-900 text-white p-4 mb-6 rounded-lg">
+                <?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if (isset($_SESSION['user_id'])): ?>
+            <form method="POST" action="">
+                <div class="mb-8">
+                    <label class="block text-gold-light mb-4 font-medium">Your Rating</label>
+                    <div class="flex justify-center space-x-2">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                            <input type="radio" id="star<?php echo $i; ?>" name="rating" value="<?php echo $i; ?>" 
+                                   class="hidden" <?php echo $i == 5 ? 'checked' : ''; ?>>
+                            <label for="star<?php echo $i; ?>" class="text-3xl cursor-pointer text-gray-500 hover:text-gold transition-colors">
+                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                </svg>
+                            </label>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+                
+                <div class="mb-8">
+                    <label for="comment" class="block text-gold-light mb-4 font-medium">Your Experience</label>
+                    <textarea id="comment" name="comment" rows="5" 
+                              class="w-full bg-gray-800 border border-gray-700 rounded-lg p-4 text-white focus:border-gold focus:ring-gold" 
+                              placeholder="Tell us about your experience..." required></textarea>
+                </div>
+                
+                <button type="submit" name="submit_testimonial" 
+                        class="w-full py-4 bg-gradient-to-r from-gold to-gold-light text-black font-bold rounded-lg hover:from-gold-light hover:to-gold transition-all duration-300">
+                    Submit Testimonial
+                </button>
+            </form>
+        <?php else: ?>
+            <div class="text-center py-10">
+                <p class="text-xl mb-8">Please login to share your experience with us.</p>
+                <a href="pages/auth/login.php" 
+                   class="px-8 py-4 bg-gradient-to-r from-gold to-gold-light text-black font-bold rounded-lg hover:from-gold-light hover:to-gold transition-all duration-300 inline-block">
+                    Login Now
+                </a>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
 </main>
 
 <?php include 'includes/footer.php'; ?>
@@ -679,6 +992,66 @@ if (isset($_SESSION['user_id'])) {
         once: true,
         offset: 120
     });
+
+    document.addEventListener('DOMContentLoaded', function() {
+    const carousel = document.getElementById('testimonialCarousel');
+    const dotsContainer = document.getElementById('testimonialDots');
+    const cards = document.querySelectorAll('.testimonial-card');
+    const cardCount = cards.length / 2; // Karena ada duplikat
+    let currentIndex = 0;
+    let autoScrollInterval;
+
+    // Create dots
+    for (let i = 0; i < cardCount; i++) {
+        const dot = document.createElement('div');
+        dot.classList.add('carousel-dot');
+        if (i === 0) dot.classList.add('active');
+        dot.addEventListener('click', () => goToSlide(i));
+        dotsContainer.appendChild(dot);
+    }
+
+    // Auto scroll function
+    function startAutoScroll() {
+        autoScrollInterval = setInterval(() => {
+            currentIndex = (currentIndex + 1) % cardCount;
+            updateCarousel();
+        }, 4000);
+    }
+
+    function updateCarousel() {
+        const scrollPosition = currentIndex * cards[0].offsetWidth;
+        carousel.scrollTo({
+            left: scrollPosition,
+            behavior: 'smooth'
+        });
+
+        // Update active dot
+        document.querySelectorAll('.carousel-dot').forEach((dot, index) => {
+            dot.classList.toggle('active', index === currentIndex);
+        });
+    }
+
+    function goToSlide(index) {
+        currentIndex = index;
+        updateCarousel();
+        resetAutoScroll();
+    }
+
+    function resetAutoScroll() {
+        clearInterval(autoScrollInterval);
+        startAutoScroll();
+    }
+
+    // Start auto scroll
+    startAutoScroll();
+
+    // Pause on hover
+    carousel.addEventListener('mouseenter', () => {
+        clearInterval(autoScrollInterval);
+    });
+
+    carousel.addEventListener('mouseleave', startAutoScroll);
+});
     
     // Luxury Counter Animation
     function animateLuxuryCounters() {
@@ -879,5 +1252,47 @@ if (isset($_SESSION['user_id'])) {
             to { opacity: 1; transform: translateY(0); }
         }
     `;
+
+// Testimonial Modal
+    const testimonialModal = document.getElementById('testimonialModal');
+    const openModalBtn = document.getElementById('openTestimonialModal');
+    const closeModalBtn = document.getElementById('closeTestimonialModal');
+    
+    openModalBtn.addEventListener('click', () => {
+        testimonialModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    });
+    
+    closeModalBtn.addEventListener('click', () => {
+        testimonialModal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    });
+    
+    // Star rating interaction
+    const starInputs = document.querySelectorAll('input[name="rating"]');
+    const starLabels = document.querySelectorAll('label[for^="star"]');
+    
+    starInputs.forEach(input => {
+        input.addEventListener('change', () => {
+            const rating = parseInt(input.value);
+            
+            starLabels.forEach((label, index) => {
+                const svg = label.querySelector('svg');
+                if (index < rating) {
+                    svg.setAttribute('fill', 'currentColor');
+                    svg.classList.add('text-gold');
+                    svg.classList.remove('text-gray-500');
+                } else {
+                    svg.setAttribute('fill', 'none');
+                    svg.classList.add('text-gray-500');
+                    svg.classList.remove('text-gold');
+                }
+            });
+        });
+    });
+    
+    // Initialize stars to show the selected rating (5 by default)
+    document.querySelector('input[name="rating"]:checked').dispatchEvent(new Event('change'));
+
     document.head.appendChild(luxuryStyle);
 </script>
