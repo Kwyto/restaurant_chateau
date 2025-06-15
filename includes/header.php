@@ -68,11 +68,16 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
             visibility: visible;
             transform: translateY(0);
         }
+        
+        .header-solid {
+            background-color: black;
+            border-bottom: 1px solid #1f2937;
+        }
     </style>
 </head>
 <body class="bg-black text-white font-sans">
     <!-- Navigation -->
-    <nav class="fixed w-full z-50 bg-black/90 backdrop-blur-sm border-b border-gray-800 transition-all duration-500 ease-in-out transform hover:shadow-lg hover:shadow-gold/20">
+    <nav class="fixed w-full z-50 bg-black border-b border-gray-800 transition-all duration-500 ease-in-out transform hover:shadow-lg hover:shadow-gold/20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <!-- Logo -->
@@ -86,19 +91,19 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
                         Home
                         <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
                     </a>
-                    <a href="<?php echo $base_path; ?>pages/home.php" class="text-white hover:text-gold transition duration-300 relative group">
+                    <a href="<?php echo $base_path; ?>pages/reservation.php" class="text-white hover:text-gold transition duration-300 relative group">
                         Reservations
                         <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
                     </a>
-                    <a href="#" class="text-white hover:text-gold transition duration-300 relative group">
+                    <a href="<?php echo $base_path; ?>pages/menu.php" class="text-white hover:text-gold transition duration-300 relative group">
                         Menu
                         <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
                     </a>
-                    <a href="#" class="text-white hover:text-gold transition duration-300 relative group">
+                    <a href="<?php echo $base_path; ?>pages/about.php" class="text-white hover:text-gold transition duration-300 relative group">
                         About
                         <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
                     </a>
-                    <a href="#" class="text-white hover:text-gold transition duration-300 relative group">
+                    <a href="<?php echo $base_path; ?>pages/contact.php" class="text-white hover:text-gold transition duration-300 relative group">
                         Contact
                         <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
                     </a>
@@ -137,9 +142,9 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
             <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                 <a href="<?php echo $base_path; ?>index.php" class="block px-3 py-2 text-white hover:text-gold transition duration-300">Home</a>
                 <a href="<?php echo $base_path; ?>pages/home.php" class="block px-3 py-2 text-white hover:text-gold transition duration-300">Reservations</a>
-                <a href="#" class="block px-3 py-2 text-white hover:text-gold transition duration-300">Menu</a>
-                <a href="#" class="block px-3 py-2 text-white hover:text-gold transition duration-300">About</a>
-                <a href="#" class="block px-3 py-2 text-white hover:text-gold transition duration-300">Contact</a>
+                <a href="<?php echo $base_path; ?>pages/menu.php" class="block px-3 py-2 text-white hover:text-gold transition duration-300">Menu</a>
+                <a href="<?php echo $base_path; ?>pages/about.php" class="block px-3 py-2 text-white hover:text-gold transition duration-300">About</a>
+                <a href="<?php echo $base_path; ?>pages/contact.php" class="block px-3 py-2 text-white hover:text-gold transition duration-300">Contact</a>
                 
                 <?php if(isset($_SESSION['user_id'])): ?>
                     <a href="<?php echo $base_path; ?>pages/profile" class="block px-3 py-2 text-gold">My Account</a>
@@ -150,8 +155,8 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
             </div>
         </div>
     </nav>
-    
-    <!-- Main Content -->
+
+    <!-- Add padding to body to account for fixed header -->
     <div class="pt-16">
     
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -173,5 +178,17 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
                     mobileMenu.classList.toggle('hidden');
                 });
             }
+        });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const header = document.querySelector('header');
+            
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 0) {
+                    header.classList.add('header-solid');
+                } else {
+                    header.classList.remove('header-solid');
+                }
+            });
         });
     </script>

@@ -14,7 +14,7 @@ if (isset($_SESSION['register_error'])) {
     <div class="max-w-md w-full space-y-8 border border-gold p-12">
         <div class="text-center">
             <h2 class="text-3xl font-serif font-bold">Create Your Account</h2>
-            <p class="mt-2 text-sm text-gray-400">Join our exclusive membership</p>
+            <p class="mt-2 text-sm text-gray-400">Join Us</p>
         </div>
         
         <?php if ($error_message): ?>
@@ -95,7 +95,7 @@ if (isset($_SESSION['register_error'])) {
     </div>
 </main>
 
-<?php include '../../includes/footer.php'; ?>
+
 
 <script>
 function togglePasswordVisibility(inputId, buttonId) {

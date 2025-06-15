@@ -81,4 +81,3 @@ document.getElementById('togglePassword').addEventListener('click', function() {
 });
 </script>
 
-<?php include '../../includes/footer.php'; ?>
