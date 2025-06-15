@@ -10,14 +10,6 @@ $_SESSION = array();
 // Destroy the session
 session_destroy();
 
-// Determine base path
-$current_dir = dirname($_SERVER['SCRIPT_NAME']);
-$base_path = '';
-
-if (strpos($current_dir, '/includes') !== false) {
-    $base_path = '../';
-}
-
-// Redirect to login page with success message
-header("Location: " . $base_path . "pages/auth/login.php?logout=success");
+// Redirect to home page
+header("Location: /restaurant/index.php");
 exit();

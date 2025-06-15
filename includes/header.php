@@ -68,6 +68,11 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
             visibility: visible;
             transform: translateY(0);
         }
+        
+        .header-solid {
+            background-color: black;
+            border-bottom: 1px solid #1f2937;
+        }
     </style>
 </head>
 <body class="bg-black text-white font-sans">
@@ -98,7 +103,7 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
                         About
                         <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
                     </a>
-                    <a href="#" class="text-white hover:text-gold transition duration-300 relative group">
+                    <a href="<?php echo $base_path; ?>pages/contact.php" class="text-white hover:text-gold transition duration-300 relative group">
                         Contact
                         <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
                     </a>
@@ -151,7 +156,68 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
         </div>
     </nav>
     
-    <!-- Main Content -->
+    <header class="bg-black border-b border-gray-800 fixed w-full top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center">
+                    <a href="<?php echo $base_path; ?>index.php" class="text-2xl font-serif font-bold text-gold hover:text-gold-dark transition duration-500">Château Lumière</a>
+                </div>
+                
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="<?php echo $base_path; ?>index.php" class="text-white hover:text-gold transition duration-300 relative group">
+                        Home
+                        <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="<?php echo $base_path; ?>pages/home.php" class="text-white hover:text-gold transition duration-300 relative group">
+                        Reservations
+                        <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="#" class="text-white hover:text-gold transition duration-300 relative group">
+                        Menu
+                        <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="#" class="text-white hover:text-gold transition duration-300 relative group">
+                        About
+                        <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="<?php echo $base_path; ?>pages/contact.php" class="text-white hover:text-gold transition duration-300 relative group">
+                        Contact
+                        <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    
+                    <?php if(isset($_SESSION['user_id'])): ?>
+                        <div class="relative dropdown">
+                            <a href="<?php echo $base_path; ?>pages/profile" class="flex items-center gap-2 text-gold hover:text-gold-dark transition duration-300">
+                                <span><?php echo $_SESSION['user_name']; ?></span>
+                                <i class="fas fa-chevron-down text-xs transition-transform duration-300 group-hover:rotate-180"></i>
+                            </a>
+                            <div class="dropdown-menu absolute right-0 mt-2 w-48 bg-black border border-gray-800 rounded-md shadow-lg py-1 z-50">
+                                <a href="<?php echo $base_path; ?>pages/profile" class="block px-4 py-2 text-white hover:bg-gray-900 hover:text-gold transition duration-300">Profile</a>
+                                <a href="<?php echo $base_path; ?>includes/logout.php" class="block px-4 py-2 text-white hover:bg-gray-900 hover:text-gold transition duration-300">Logout</a>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <a href="<?php echo $base_path; ?>pages/auth/login.php" class="px-4 py-2 border border-gold text-gold hover:bg-gold hover:text-black transition duration-500 transform hover:-translate-y-1">
+                            Login
+                        </a>
+                    <?php endif; ?>
+                </div>
+                
+                <!-- Mobile menu button -->
+                <div class="md:hidden flex items-center">
+                    <button type="button" class="mobile-menu-button p-2 rounded-md text-white hover:text-gold focus:outline-none transition duration-300">
+                        <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Add padding to body to account for fixed header -->
     <div class="pt-16">
     
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -173,5 +239,17 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
                     mobileMenu.classList.toggle('hidden');
                 });
             }
+        });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const header = document.querySelector('header');
+            
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 0) {
+                    header.classList.add('header-solid');
+                } else {
+                    header.classList.remove('header-solid');
+                }
+            });
         });
     </script>

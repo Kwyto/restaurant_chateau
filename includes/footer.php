@@ -38,8 +38,8 @@
                         123 Luxury Avenue<br>
                         Beverly Hills, CA 90210<br>
                         <br>
-                        <a href="tel:+18005551234" class="hover:text-gold transition duration-300">+1 (800) 555-1234</a><br>
-                        <a href="mailto:reservations@elegance.com" class="hover:text-gold transition duration-300">reservations@elegance.com</a>
+                        <a href="tel:+18005551234" class="hover:text-gold transition duration-300">(+62) 895-1293-7862</a><br>
+                        <a href="mailto:reservations@elegance.com" class="hover:text-gold transition duration-300">chateaulumiere27@gmail.com</a>
                     </address>
                 </div>
                 
@@ -49,10 +49,7 @@
                         Subscribe to receive updates on special events and exclusive offers.
                     </p>
                     <form class="flex">
-                        <input type="email" placeholder="Your email" class="bg-gray-900 text-white px-4 py-2 w-full focus:outline-none focus:ring-1 focus:ring-gold">
-                        <button type="submit" class="bg-gold text-black px-4 py-2 hover:bg-gold-dark transition duration-300">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
+     
                     </form>
                 </div>
             </div>
@@ -62,8 +59,6 @@
                     &copy; <?php echo date('Y'); ?> Château Lumière. All rights reserved.
                 </p>
                 <div class="flex space-x-6 mt-4 md:mt-0">
-                    <a href="#" class="text-gray-400 hover:text-gold text-sm transition duration-300">Privacy Policy</a>
-                    <a href="#" class="text-gray-400 hover:text-gold text-sm transition duration-300">Terms of Service</a>
                 </div>
             </div>
         </div>
