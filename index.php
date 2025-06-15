@@ -801,19 +801,19 @@ button[name="submit_testimonial"]:hover::after {
             
             <div class="grid grid-cols-2 gap-6" data-aos="fade-left" data-aos-duration="1200">
                 <div class="luxury-image card-luxury">
-                    <img src="assets/images/restaurant-1.jpg" alt="Restaurant Interior" class="w-full h-72 object-cover">
+                    <img src="assets/videos/Video_Restoran_Mewah_Selesai.gif" alt="Restaurant Interior" class="w-full h-72 object-cover">
                     <div class="menu-item-overlay"></div>
                 </div>
                 <div class="luxury-image card-luxury" style="transform: translateY(2rem);">
-                    <img src="assets/images/restaurant-2.jpg" alt="Chef Preparing Food" class="w-full h-72 object-cover">
+                    <img src="assets/videos/Video_Siap_Ukuran_Kotak_Sama.gif" alt="Chef Preparing Food" class="w-full h-72 object-cover">
                     <div class="menu-item-overlay"></div>
                 </div>
                 <div class="luxury-image card-luxury" style="transform: translateY(-2rem);">
-                    <img src="assets/images/restaurant-3.jpg" alt="Wine Cellar" class="w-full h-72 object-cover">
+                    <img src="assets/videos/Video_Wine_Cellar_Mewah_Dibuat.gif" alt="Wine Cellar" class="w-full h-72 object-cover">
                     <div class="menu-item-overlay"></div>
                 </div>
                 <div class="luxury-image card-luxury">
-                    <img src="assets/images/restaurant-4.jpg" alt="Dining Experience" class="w-full h-72 object-cover">
+                    <img src="assets/videos/Video_Pengalaman_Makan_Mewah.gif" alt="Dining Experience" class="w-full h-72 object-cover">
                     <div class="menu-item-overlay"></div>
                 </div>
             </div>
