@@ -1,7 +1,6 @@
 <?php 
 
-include '../../../includes/config.php';
-
+include '../includes/config.php';
 $users = getCustomers($conn);
 $menu = getMenuItems($conn, limit:5);
 $reservations = getReservations($conn, limit:6);

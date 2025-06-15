@@ -1,5 +1,5 @@
 <?php
-include '../../../includes/config.php';
+include '../includes/config.php';
 
 // Ambil parameter pencarian dan pagination
 $search = $_GET['search'] ?? '';

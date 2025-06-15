@@ -41,120 +41,6 @@ function getUserData($conn, $userId) {
     return mysqli_fetch_assoc($result);
 }
 
-function getCustomers($conn) {
-    $query = "SELECT * FROM users";
-    $stmt = mysqli_prepare($conn, $query);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    return $result;
-}
-
-function getReservations($conn, $status = null, $search = null, $date = null, $page = 1, $perPage = 10, $limit = null) {
-    // Validasi parameter
-    $page = max(1, (int)$page);
-    $perPage = max(1, (int)$perPage);
-    $offset = ($page - 1) * $perPage;
-
-    // Query dasar dengan JOIN yang benar dan kolom spesifik
-    $query = "SELECT 
-                r.id AS reservation_id,
-                r.reservation_number,
-                r.reservation_date,
-                r.reservation_time,
-                r.table_number,
-                r.ocassion,
-                r.guests,
-                r.special_request,
-                r.status,
-                r.created_at AS reservation_created,
-                u.id AS user_id,
-                u.first_name,
-                u.last_name,
-                u.email,
-                u.phone,
-                u.membership_level
-              FROM reservations r
-              JOIN users u ON r.user_id = u.id
-              WHERE 1=1";
-    
-    $params = [];
-    $types = '';
-
-    // Filter status
-    if (!empty($status)) {
-        $query .= " AND r.status = ?";
-        $params[] = $status;
-        $types .= 's';
-    }
-
-    // Filter pencarian
-    if (!empty($search)) {
-        $query .= " AND (r.reservation_number LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ?)";
-        $searchTerm = "%$search%";
-        $params = array_merge($params, [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
-        $types .= 'ssss';
-    }
-
-    // Filter tanggal
-    if (!empty($date)) {
-        $query .= " AND r.reservation_date = ?";
-        $params[] = $date;
-        $types .= 's';
-    }
-
-    // Tambahkan sorting
-    $query .= " ORDER BY r.reservation_date DESC, r.reservation_time DESC";
-
-    // Jika ada limit yang spesifik (untuk keperluan lain)
-    if ($limit !== null) {
-        $query .= " LIMIT ?";
-        $params[] = (int)$limit;
-        $types .= 'i';
-    } else {
-        // Tambahkan pagination hanya jika tidak ada limit spesifik
-        $query .= " LIMIT ? OFFSET ?";
-        $params[] = $perPage;
-        $params[] = $offset;
-        $types .= 'ii';
-    }
-
-    // Persiapkan statement
-    $stmt = mysqli_prepare($conn, $query);
-    if (!$stmt) {
-        error_log("Error preparing statement: " . mysqli_error($conn));
-        throw new Exception("Database error occurred");
-    }
-
-    // Bind parameter jika ada
-    if (!empty($params)) {
-        if (!mysqli_stmt_bind_param($stmt, $types, ...$params)) {
-            error_log("Error binding parameters: " . mysqli_stmt_error($stmt));
-            mysqli_stmt_close($stmt);
-            throw new Exception("Database error occurred");
-        }
-    }
-
-    // Eksekusi query
-    if (!mysqli_stmt_execute($stmt)) {
-        error_log("Error executing statement: " . mysqli_stmt_error($stmt));
-        mysqli_stmt_close($stmt);
-        throw new Exception("Database error occurred");
-    }
-
-    // Dapatkan hasil
-    $result = mysqli_stmt_get_result($stmt);
-    if (!$result) {
-        error_log("Error getting result: " . mysqli_stmt_error($stmt));
-        mysqli_stmt_close($stmt);
-        throw new Exception("Database error occurred");
-    }
-    
-    // Tutup statement
-    mysqli_stmt_close($stmt);
-
-    return $result;
-}
-
 // Get reservations for user
 function getUserReservations($conn, $userId) {
     $query = "SELECT r.*, p.amount, p.payment_method, p.status as payment_status 
@@ -168,167 +54,24 @@ function getUserReservations($conn, $userId) {
     return mysqli_stmt_get_result($stmt);
 }
 
-// Get menu items
-function getMenuItems($conn, $category = null, $search = null, $page = 1, $perPage = 10, $limit = null) {
-    $query = "SELECT * FROM menu_items WHERE 1=1";
-    $params = [];
-    $types = '';
-    $offset = ($page - 1) * $perPage;
-    
-    if ($category) {
-        $query .= " AND category = ?";
-        $params[] = $category;
-        $types .= 's';
-    }
-    
-    if ($search) {
-        $query .= " AND (name LIKE ? OR description LIKE ?)";
-        $searchTerm = "%$search%";
-        $params = array_merge($params, [$searchTerm, $searchTerm]);
-        $types .= 'ss';
-    }
-
-    if ($limit !== null) {
-        $query .= " LIMIT ?";
-        $params[] = (int)$limit;
-        $types .= 'i';
-    } else {
-        // Tambahkan pagination hanya jika tidak ada limit spesifik
-        $query .= " LIMIT ? OFFSET ?";
-        $params[] = $perPage;
-        $params[] = $offset;
-        $types .= 'ii';
-    }
-    
-    $stmt = mysqli_prepare($conn, $query);
-    if (!$stmt) {
-        die("Error preparing statement: " . mysqli_error($conn));
-    }
-    
-    if (!empty($params)) {
-        mysqli_stmt_bind_param($stmt, $types, ...$params);
-    }
-    
-    if (!mysqli_stmt_execute($stmt)) {
-        die("Error executing statement: " . mysqli_stmt_error($stmt));
-    }
-    
-    $result = mysqli_stmt_get_result($stmt);
-    
-    mysqli_stmt_close($stmt);
-    
-    return $result;
-}
-
-function countMenuItems($conn, $category = null, $search = null) {
-    $query = "SELECT COUNT(*) as total FROM menu_items WHERE 1=1";
-    $params = [];
-    $types = '';
-    
-    if ($category) {
-        $query .= " AND category = ?";
-        $params[] = $category;
-        $types .= 's';
-    }
-    
-    if ($search) {
-        $query .= " AND (name LIKE ? OR description LIKE ?)";
-        $searchTerm = "%$search%";
-        $params = array_merge($params, [$searchTerm, $searchTerm]);
-        $types .= 'ss';
-    }
-    
-    $stmt = mysqli_prepare($conn, $query);
-    
-    if (!empty($params)) {
-        mysqli_stmt_bind_param($stmt, $types, ...$params);
-    }
-    
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $row = mysqli_fetch_assoc($result);
-    
-    mysqli_stmt_close($stmt);
-    
-    return $row['total'];
-}
-
 // Generate random reservation number
 function generateReservationNumber() {
     return 'RES-' . strtoupper(substr(md5(uniqid()), 0, 8));
 }
 
-function getCoupon($conn, $search = null, $page = 1, $perPage = 10, $limit = null) {
-    $page = max(1, (int)$page);
-    $perPage = max(1, (int)$perPage);
-    $offset = ($page - 1) * $perPage;
-
-    $query = 'SELECT * FROM coupons';
-    $conditions = [];
-    $params = [];
-    $types = '';
-
-    // Search filter
-    if (!empty($search)) {
-        $conditions[] = '(code LIKE ?)';
-        $params[] = '%' . $search . '%';
-        $types .= 's';
-    }
-
-    // Gabung kondisi jika ada
-    if (!empty($conditions)) {
-        $query .= ' WHERE ' . implode(' AND ', $conditions);
-    }
-
-    // Pagination or Limit
-    if ($limit !== null) {
-        $query .= ' LIMIT ?';
-        $params[] = (int)$limit;
-        $types .= 'i';
+// Untuk menampilkan menu
+function getMenuItems($conn, $category = null) {
+    if ($category) {
+        $query = "SELECT * FROM menu_items WHERE category = ?";
+        $stmt = mysqli_prepare($conn, $query);
+        mysqli_stmt_bind_param($stmt, "s", $category);
     } else {
-        $query .= ' LIMIT ?, ?';
-        $params[] = $offset;
-        $params[] = $perPage;
-        $types .= 'ii';
+        $query = "SELECT * FROM menu_items";
+        $stmt = mysqli_prepare($conn, $query);
     }
-
-    $stmt = mysqli_prepare($conn, $query);
-    if (!$stmt) {
-        throw new Exception("Database error: " . mysqli_error($conn));
-    }
-
-    // Bind param jika ada
-    if (!empty($params)) {
-        mysqli_stmt_bind_param($stmt, $types, ...$params);
-    }
-
+    
     mysqli_stmt_execute($stmt);
     return mysqli_stmt_get_result($stmt);
 }
 
-function countTotalCoupons($conn) {
-    $query = 'SELECT COUNT(*) AS total FROM coupons';
-    $stmt = mysqli_prepare($conn, $query);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $row = mysqli_fetch_assoc($result);
-    
-    return (int)$row['total'];
-}
-
-function getMenuFromID($conn, $id) {
-    $query = "SELECT * FROM menu_items WHERE id = ?";
-
-    $stmt = mysqli_prepare($conn, $query);
-    if (!$stmt) {
-        throw new Exception("Database error: " . mysqli_error($conn));
-    }
-
-    mysqli_stmt_bind_param($stmt, 'i', $id);
-
-    mysqli_stmt_execute($stmt);
-
-    $result = mysqli_stmt_get_result($stmt);
-    return mysqli_fetch_assoc($result);
-}
 ?>

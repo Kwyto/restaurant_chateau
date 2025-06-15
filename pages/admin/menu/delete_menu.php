@@ -1,6 +1,5 @@
 <?php
-include '../../../includes/config.php';
-
+include '../includes/config.php';
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') {

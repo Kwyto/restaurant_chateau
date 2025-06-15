@@ -1,6 +1,6 @@
 <?php
 
-include '../../../includes/config.php';
+include '../includes/config.php';
 // include 'edit_menu.php';
 
 $category = $_GET['category'] ?? '';

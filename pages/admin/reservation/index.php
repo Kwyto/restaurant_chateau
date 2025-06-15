@@ -1,6 +1,5 @@
 <?php
-include '../../../includes/config.php';
-
+include '../includes/config.php';
 // Fungsi untuk menghitung total reservasi
 function countReservations($conn, $status = '', $search = '', $date = '') {
     $query = "SELECT COUNT(*) as total FROM reservations WHERE 1=1";

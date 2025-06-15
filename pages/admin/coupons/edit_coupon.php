@@ -1,6 +1,5 @@
 <?php
-include '../../../includes/config.php';
-
+include '../includes/config.php';
 // Check if coupon ID is provided
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     header('Location: index.php?error=Invalid coupon ID');
