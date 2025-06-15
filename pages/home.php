@@ -201,12 +201,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['book_reservation'])) {
                         <div>
                             <label for="guests" class="block text-sm font-medium mb-2 text-gold">Number of Guests</label>
                             <select id="guests" name="guests" class="w-full bg-black border border-gold py-3 px-4 focus:outline-none focus:ring-gold focus:border-gold text-white" required>
-                                <?php for($i = 1; $i <= 12; $i++): ?>
+                                <?php for($i = 1; $i <= 8; $i++): ?>
                                     <option value="<?php echo $i; ?>" <?php echo $i == 2 ? 'selected' : ''; ?>>
                                         <?php echo $i . ($i == 1 ? ' Person' : ' People'); ?>
                                     </option>
                                 <?php endfor; ?>
-                                <option value="13">13+ People (Contact Us)</option>
+                                
                             </select>
                         </div>
                         
