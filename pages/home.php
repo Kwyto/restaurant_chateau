@@ -201,12 +201,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['book_reservation'])) {
                         <div>
                             <label for="guests" class="block text-sm font-medium mb-2 text-gold">Number of Guests</label>
                             <select id="guests" name="guests" class="w-full bg-black border border-gold py-3 px-4 focus:outline-none focus:ring-gold focus:border-gold text-white" required>
-                                <?php for($i = 1; $i <= 12; $i++): ?>
+                                <?php for($i = 1; $i <= 8; $i++): ?>
                                     <option value="<?php echo $i; ?>" <?php echo $i == 2 ? 'selected' : ''; ?>>
                                         <?php echo $i . ($i == 1 ? ' Person' : ' People'); ?>
                                     </option>
                                 <?php endfor; ?>
-                                <option value="13">13+ People (Contact Us)</option>
+                                
                             </select>
                         </div>
                         
@@ -327,11 +327,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['book_reservation'])) {
                                 <div>
                                     <label for="vehicle-type" class="block text-sm font-medium mb-2 text-gold">Vehicle Preference</label>
                                     <select id="vehicle-type" name="vehicle-type" class="w-full bg-black border border-gold py-3 px-4 focus:outline-none focus:ring-gold focus:border-gold text-white">
-                                        <option value="mercedes-s-class" data-price="25000">Mercedes S-Class ($25,000/km)</option>
-                                        <option value="rolls-royce-phantom" data-price="50000">Rolls-Royce Phantom ($50,000/km)</option>
-                                        <option value="bentley-mulsanne" data-price="40000">Bentley Mulsanne ($40,000/km)</option>
-                                        <option value="maybach" data-price="35000">Maybach ($35,000/km)</option>
-                                        <option value="limousine" data-price="75000">Limousine ($75,000/km)</option>
+                                        <option value="mercedes-s-class" data-price="25">Mercedes S-Class ($25)</option>
+                                        <option value="rolls-royce-phantom" data-price="50">Rolls-Royce Phantom ($50)</option>
+                                        <option value="bentley-mulsanne" data-price="40">Bentley Mulsanne ($40)</option>
+                                        <option value="maybach" data-price="35">Maybach ($35)</option>
+                                        <option value="limousine" data-price="75">Limousine ($75)</option>
                                     </select>
                                 </div>
                                 
@@ -557,14 +557,8 @@ function updatePickupCost() {
         const pricePerKm = parseInt(selectedOption.dataset.price);
         pickupCost = pricePerKm * 5; // Fixed 5km distance
         
-        const formattedCost = new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            maximumFractionDigits: 0
-        }).format(pickupCost);
-        
-        pickupCostElem.textContent = formattedCost;
-        pickupCostSummary.textContent = formattedCost;
+        pickupCostElem.textContent = `$${pickupCost}`;
+        pickupCostSummary.textContent = `$${pickupCost}`;
         pickupCostRow.style.display = 'flex';
     } else {
         pickupCostElem.textContent = '$0';
@@ -580,7 +574,7 @@ function updateTotal() {
     const baseReservationFee = 50.00;
     let subtotal = baseReservationFee;
 
-    // Add food cost if any
+    // Add food cost
     const foodCost = orderedItems.reduce((total, item) => {
         return total + (parseFloat(item.price) * parseInt(item.quantity));
     }, 0);
@@ -591,22 +585,25 @@ function updateTotal() {
         subtotal += foodCost;
     }
 
-    // Add pickup cost if enabled
-    if (document.getElementById('pickup-yes').checked) {
-        const pickupCost = parseFloat(document.getElementById('pickup_cost').value) || 0;
-        subtotal += pickupCost;
-    }
+    // Add pickup cost
+    const pickupCost = document.getElementById('pickup-yes').checked ? 
+        parseFloat(document.getElementById('pickup-cost').textContent.replace('$', '')) : 0;
+    subtotal += pickupCost;
 
     // Calculate tax and total
     const tax = subtotal * 0.10;
     const total = subtotal + tax;
 
-    // Update displays with proper formatting
+    // Update displays
     document.getElementById('tax-amount').textContent = `$${tax.toFixed(2)}`;
-    document.getElementById('summary-total').textContent = `$${total.toLocaleString()}`;
+    document.getElementById('summary-total').textContent = `$${total.toFixed(2)}`;
+
+    // Update hidden fields
+    document.getElementById('pickup_cost').value = pickupCost;
+    document.getElementById('food_cost').value = foodCost;
 }
 
-// Add these event listeners in DOMContentLoaded
+// Add event listeners for real-time updates
 document.addEventListener('DOMContentLoaded', function() {
     // Menu items data with categories
     const menuItems = [
