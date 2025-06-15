@@ -743,14 +743,7 @@ if (isset($_SESSION['user_id'])) {
     setInterval(createLuxuryParticle, 500);
     
     // Luxury Loading Animation
-    window.addEventListener('load', () => {
-        setTimeout(() => {
-            document.querySelector('.luxury-loader').style.opacity = '0';
-            setTimeout(() => {
-                document.querySelector('.luxury-loader').style.display = 'none';
-            }, 1500);
-        }, 2000);
-    });
+
     
     // Luxury Image Lazy Loading
     const luxuryImages = document.querySelectorAll('img');
