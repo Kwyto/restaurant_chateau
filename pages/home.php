@@ -9,6 +9,89 @@ if(!isset($_SESSION['user_id'])) {
 
 $userData = getUserData($conn, $_SESSION['user_id']);
 $menuItems = getMenuItems($conn);
+
+// Add this near the top after includes
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['book_reservation'])) {
+    $userId = $_SESSION['user_id'];
+    $guests = $_POST['guests'];
+    $date = $_POST['date'];
+    $time = $_POST['time'];
+    $occasion = $_POST['occasion'];
+    $pickup = $_POST['pickup'] === 'yes' ? 1 : 0;
+    $pickupLocation = $pickup ? $_POST['pickup-location'] : null;
+    $pickupTime = $pickup ? $_POST['pickup-time'] : null;
+    $vehicleType = $pickup ? $_POST['vehicle-type'] : null;
+    
+    // Calculate costs
+    $pickupCost = isset($_POST['pickup_cost']) ? floatval($_POST['pickup_cost']) : 0;
+    $foodCost = isset($_POST['food_cost']) ? floatval($_POST['food_cost']) : 0;
+    $taxAmount = ($pickupCost + $foodCost + 50) * 0.10; // 50 is reservation fee
+    $totalAmount = $pickupCost + $foodCost + 50 + $taxAmount;
+
+    try {
+        // Start transaction
+        $conn->begin_transaction();
+
+        // Insert main reservation
+        $stmt = $conn->prepare("
+            INSERT INTO reservations (
+                user_id, guests, reservation_date, reservation_time, 
+                special_occasion, pickup_service, pickup_location, 
+                pickup_time, vehicle_type, pickup_cost, food_cost, 
+                tax_amount, total_amount
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $stmt->bind_param(
+            "iisssississdd",
+            $userId, $guests, $date, $time, $occasion, $pickup,
+            $pickupLocation, $pickupTime, $vehicleType, $pickupCost,
+            $foodCost, $taxAmount, $totalAmount
+        );
+
+        $stmt->execute();
+        $reservationId = $conn->insert_id;
+
+        // Insert ordered items if any
+        if (isset($_POST['ordered_items']) && !empty($_POST['ordered_items'])) {
+            $items = json_decode($_POST['ordered_items'], true);
+            
+            $stmt = $conn->prepare("
+                INSERT INTO reservation_items (
+                    reservation_id, menu_item_id, quantity, price
+                ) VALUES (?, ?, ?, ?)
+            ");
+
+            foreach ($items as $item) {
+                $stmt->bind_param(
+                    "iiid",
+                    $reservationId, $item['id'], $item['quantity'], $item['price']
+                );
+                $stmt->execute();
+            }
+        }
+
+        // Commit transaction
+        $conn->commit();
+
+        // Store reservation data in session for next step
+        $_SESSION['reservation_data'] = [
+            'id' => $reservationId,
+            'guests' => $guests,
+            'date' => $date,
+            'time' => $time
+        ];
+
+        // Redirect to seat selection
+        header("Location: seat-selection.php");
+        exit();
+
+    } catch (Exception $e) {
+        // Rollback on error
+        $conn->rollback();
+        $error = "Failed to process reservation. Please try again.";
+    }
+}
 ?>
 
 <?php include '../includes/header.php'; ?>
@@ -23,13 +106,13 @@ $menuItems = getMenuItems($conn);
         <div class="carousel h-full w-full">
             <div class="carousel-inner h-full">
                 <div class="carousel-item h-full w-full active">
-                    <img src="../../assets/images/carousel-1.jpg" class="h-full w-full object-cover" alt="Fine Dining">
+                    <img src="../assets/images/reservasi.jpg" class="h-full w-full object-cover" alt="Fine Dining">
                 </div>
                 <div class="carousel-item h-full w-full">
-                    <img src="../../assets/images/carousel-2.jpg" class="h-full w-full object-cover" alt="Chef's Special">
+                    <img src="../assets/images/chef-special.jpg" class="h-full w-full object-cover" alt="Chef's Special">
                 </div>
                 <div class="carousel-item h-full w-full">
-                    <img src="../../assets/images/carousel-3.jpg" class="h-full w-full object-cover" alt="Wine Selection">
+                    <img src="../assets/images/wine-selection.jpg" class="h-full w-full object-cover" alt="Wine Selection">
                 </div>
             </div>
         </div>
@@ -113,7 +196,7 @@ $menuItems = getMenuItems($conn);
             <div class="md:col-span-2">
                 <h2 class="text-3xl font-serif font-bold mb-6 text-gold" data-aos="fade-right">Make a Reservation</h2>
                 
-                <form id="reservation-form" action="booking.php" method="POST">
+                <form id="reservation-form" method="POST">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         <div>
                             <label for="guests" class="block text-sm font-medium mb-2 text-gold">Number of Guests</label>
@@ -129,7 +212,33 @@ $menuItems = getMenuItems($conn);
                         
                         <div>
                             <label for="date" class="block text-sm font-medium mb-2 text-gold">Date</label>
-                            <input type="date" id="date" name="date" min="<?php echo date('Y-m-d'); ?>" class="w-full bg-black border border-gold py-3 px-4 focus:outline-none focus:ring-gold focus:border-gold text-white" required>
+                            <div class="relative">
+                                <input type="text" 
+                                    id="date" 
+                                    name="date" 
+                                    readonly
+                                    placeholder="Click to select date"
+                                    class="w-full bg-black border border-gold py-3 px-4 focus:outline-none focus:ring-gold focus:border-gold text-gold cursor-pointer"
+                                    required>
+                                <!-- Calendar Dropdown -->
+                                <div id="calendar-popup" class="hidden absolute top-full left-0 mt-1 p-4 bg-[#1a1a1a] border-2 border-gold rounded-lg shadow-xl z-[100] w-[300px]">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <button type="button" id="prev-month" class="text-gold hover:text-white text-xl p-1">‹</button>
+                                        <span id="current-month" class="text-gold font-bold"></span>
+                                        <button type="button" id="next-month" class="text-gold hover:text-white text-xl p-1">›</button>
+                                    </div>
+                                    <div class="grid grid-cols-7 gap-1 mb-2">
+                                        <div class="text-gold/70 text-sm text-center">S</div>
+                                        <div class="text-gold/70 text-sm text-center">M</div>
+                                        <div class="text-gold/70 text-sm text-center">T</div>
+                                        <div class="text-gold/70 text-sm text-center">W</div>
+                                        <div class="text-gold/70 text-sm text-center">T</div>
+                                        <div class="text-gold/70 text-sm text-center">F</div>
+                                        <div class="text-gold/70 text-sm text-center">S</div>
+                                    </div>
+                                    <div id="calendar-days" class="grid grid-cols-7 gap-1"></div>
+                                </div>
+                            </div>
                         </div>
                         
                         <div>
@@ -201,15 +310,18 @@ $menuItems = getMenuItems($conn);
                                 
                                 <div>
                                     <label for="pickup-time" class="block text-sm font-medium mb-2 text-gold">Pickup Time</label>
-                                    <input
-                                        type="text"
-                                        id="pickup-time"
-                                        name="pickup-time"
-                                        class="w-full bg-black border border-gold py-3 px-4 focus:outline-none focus:ring-gold focus:border-gold text-white"
-                                        placeholder="e.g. 18:30 or 6:30 PM"
-                                        pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]( ?[APap][Mm])?$"
-                                        autocomplete="off"
-                                    >
+                                    <select id="pickup-time" 
+                                        name="pickup-time" 
+                                        class="w-full bg-black border border-gold py-3 px-4 focus:outline-none focus:ring-gold focus:border-gold text-white">
+                                        <?php 
+                                        $start = strtotime('16:00');
+                                        $end = strtotime('22:00');
+                                        for($i = $start; $i <= $end; $i += 1800): ?>
+                                            <option value="<?php echo date('H:i', $i); ?>">
+                                                <?php echo date('g:i A', $i); ?>
+                                            </option>
+                                        <?php endfor; ?>
+                                    </select>
                                 </div>
                                 
                                 <div>
@@ -230,6 +342,12 @@ $menuItems = getMenuItems($conn);
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Add hidden fields for costs -->
+                    <input type="hidden" name="pickup_cost" id="pickup_cost" value="0">
+                    <input type="hidden" name="food_cost" id="food_cost" value="0">
+                    <input type="hidden" name="ordered_items" id="ordered_items" value="">
+                    <input type="hidden" name="book_reservation" value="1">
                     
                     <button type="submit" id="book-now" class="w-full py-4 bg-gold text-black hover:bg-transparent hover:text-gold hover:border hover:border-gold transition duration-500 transform hover:-translate-y-1 hover:shadow-lg hover:shadow-gold/30 font-semibold">
                         Book Now
@@ -428,33 +546,67 @@ function showDistanceInfo(distance, duration) {
 }
 
 function updatePickupCost() {
-    if (!document.getElementById('pickup-yes').checked) {
-        document.getElementById('pickup-cost').textContent = '$0';
-        document.getElementById('pickup-cost-summary').textContent = '$0';
-        return;
+    const pickupCostElem = document.getElementById('pickup-cost');
+    const pickupCostSummary = document.getElementById('pickup-cost-summary');
+    const pickupCostRow = document.getElementById('pickup-cost-row');
+    let pickupCost = 0;
+
+    if (document.getElementById('pickup-yes').checked) {
+        const vehicleSelect = document.getElementById('vehicle-type');
+        const selectedOption = vehicleSelect.options[vehicleSelect.selectedIndex];
+        const pricePerKm = parseInt(selectedOption.dataset.price);
+        pickupCost = pricePerKm * 5; // Fixed 5km distance
+        
+        const formattedCost = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            maximumFractionDigits: 0
+        }).format(pickupCost);
+        
+        pickupCostElem.textContent = formattedCost;
+        pickupCostSummary.textContent = formattedCost;
+        pickupCostRow.style.display = 'flex';
+    } else {
+        pickupCostElem.textContent = '$0';
+        pickupCostSummary.textContent = '$0';
+        pickupCostRow.style.display = 'none';
     }
 
-    const vehicleSelect = document.getElementById('vehicle-type');
-    const selectedOption = vehicleSelect.options[vehicleSelect.selectedIndex];
-    const pricePerKm = parseInt(selectedOption.dataset.price);
-    
-    // Always calculate based on 5km
-    const pickupCost = Math.round(pricePerKm * 5);
-    
-    // Update cost displays
-    const formattedCost = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 0
-    }).format(pickupCost);
-    
-    document.getElementById('pickup-cost').textContent = formattedCost;
-    document.getElementById('pickup-cost-row').classList.remove('hidden');
-    document.getElementById('pickup-cost-summary').textContent = formattedCost;
-    
+    document.getElementById('pickup_cost').value = pickupCost;
     updateTotal();
 }
 
+function updateTotal() {
+    const baseReservationFee = 50.00;
+    let subtotal = baseReservationFee;
+
+    // Add food cost if any
+    const foodCost = orderedItems.reduce((total, item) => {
+        return total + (parseFloat(item.price) * parseInt(item.quantity));
+    }, 0);
+    
+    if (foodCost > 0) {
+        document.getElementById('food-cost-row').style.display = 'flex';
+        document.getElementById('food-cost').textContent = `$${foodCost.toFixed(2)}`;
+        subtotal += foodCost;
+    }
+
+    // Add pickup cost if enabled
+    if (document.getElementById('pickup-yes').checked) {
+        const pickupCost = parseFloat(document.getElementById('pickup_cost').value) || 0;
+        subtotal += pickupCost;
+    }
+
+    // Calculate tax and total
+    const tax = subtotal * 0.10;
+    const total = subtotal + tax;
+
+    // Update displays with proper formatting
+    document.getElementById('tax-amount').textContent = `$${tax.toFixed(2)}`;
+    document.getElementById('summary-total').textContent = `$${total.toLocaleString()}`;
+}
+
+// Add these event listeners in DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function() {
     // Menu items data with categories
     const menuItems = [
@@ -731,9 +883,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function addToOrder(itemId, itemName, itemPrice) {
-        const existingItem = orderedItems.find(item => item.id === itemId);
+        // Get button element
+        const button = document.querySelector(`[data-id="${itemId}"]`);
         
-        if(existingItem) {
+        // Add visual feedback with scale animation
+        button.classList.add('scale-110', 'bg-green-500');
+        button.innerHTML = '<span class="text-black">✓ Added</span>';
+        
+        // Add ripple effect
+        const ripple = document.createElement('span');
+        ripple.className = 'absolute inset-0 bg-white/30 rounded animate-ripple';
+        button.appendChild(ripple);
+        
+        setTimeout(() => {
+            button.classList.remove('scale-110', 'bg-green-500');
+            button.textContent = '+ Add';
+            ripple.remove();
+        }, 500);
+
+        // Update order data
+        const existingItem = orderedItems.find(item => item.id === itemId);
+        if (existingItem) {
             existingItem.quantity += 1;
         } else {
             orderedItems.push({
@@ -743,10 +913,70 @@ document.addEventListener('DOMContentLoaded', function() {
                 quantity: 1
             });
         }
-        
+
+        // Update display and totals with animation
         updateOrderedItemsDisplay();
-        updateTotal();
+        animateUpdatedTotal();
     }
+
+    function animateUpdatedTotal() {
+        const foodCost = orderedItems.reduce((total, item) => {
+            return total + (parseFloat(item.price) * parseInt(item.quantity));
+        }, 0);
+
+        // Update food cost with animation
+        if (foodCost > 0) {
+            const foodCostRow = document.getElementById('food-cost-row');
+            const foodCostElem = document.getElementById('food-cost');
+            
+            foodCostRow.style.display = 'flex';
+            foodCostElem.classList.add('scale-110', 'text-white');
+            foodCostElem.textContent = `$${foodCost.toFixed(2)}`;
+            
+            setTimeout(() => {
+                foodCostElem.classList.remove('scale-110', 'text-white');
+            }, 300);
+        }
+
+        // Calculate final totals
+        const baseReservationFee = 50.00;
+        let subtotal = baseReservationFee + foodCost;
+        
+        if (document.getElementById('pickup-yes').checked) {
+            subtotal += parseFloat(document.getElementById('pickup_cost').value) || 0;
+        }
+
+        const tax = subtotal * 0.10;
+        const total = subtotal + tax;
+
+        // Animate tax and total updates
+        const taxElem = document.getElementById('tax-amount');
+        const totalElem = document.getElementById('summary-total');
+        
+        taxElem.classList.add('scale-110', 'text-white');
+        totalElem.classList.add('scale-110', 'text-white');
+        
+        taxElem.textContent = `$${tax.toFixed(2)}`;
+        totalElem.textContent = `$${total.toLocaleString()}`;
+        
+        setTimeout(() => {
+            taxElem.classList.remove('scale-110', 'text-white');
+            totalElem.classList.remove('scale-110', 'text-white');
+        }, 300);
+    }
+
+    // Add style for ripple animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes ripple {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(4); opacity: 0; }
+        }
+        .animate-ripple {
+            animation: ripple 0.5s linear;
+        }
+    `;
+    document.head.appendChild(style);
     
     function updateOrderedItemsDisplay() {
         const orderedItemsContainer = document.getElementById('ordered-items');
@@ -780,34 +1010,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    function updatePickupCost() {
-        if (!document.getElementById('pickup-yes').checked) {
-            document.getElementById('pickup-cost').textContent = '$0';
-            document.getElementById('pickup-cost-summary').textContent = '$0';
-            return;
-        }
-
-        const vehicleSelect = document.getElementById('vehicle-type');
-        const selectedOption = vehicleSelect.options[vehicleSelect.selectedIndex];
-        const pricePerKm = parseInt(selectedOption.dataset.price);
-        
-        // Always calculate based on 5km
-        const pickupCost = Math.round(pricePerKm * 5);
-        
-        // Update cost displays
-        const formattedCost = new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            maximumFractionDigits: 0
-        }).format(pickupCost);
-        
-        document.getElementById('pickup-cost').textContent = formattedCost;
-        document.getElementById('pickup-cost-row').classList.remove('hidden');
-        document.getElementById('pickup-cost-summary').textContent = formattedCost;
-        
-        updateTotal();
-    }
-    
     
     function updateSummary() {
         const guests = document.getElementById('guests').value;
@@ -826,63 +1028,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('summary-occasion').textContent = occasion;
         
         // Pickup time
-        const pickupTimeInput = document.getElementById('pickup-time');
-        let pickupTime = pickupTimeInput.value.trim();
-        let formatted = '-';
-        if (pickupTime) {
-            // Try to parse 24h or 12h format
-            let match = pickupTime.match(/^([01]?[0-9]|2[0-3]):([0-5][0-9]( ?[APap][Mm])?)$/);
-            if (match) {
-                let hour = parseInt(match[1], 10);
-                let minute = match[2];
-                let ampm = match[4] ? match[4].toUpperCase() : '';
-                if (!ampm) {
-                    // Convert 24h to 12h
-                    ampm = hour >= 12 ? 'PM' : 'AM';
-                    hour = hour % 12 || 12;
-                }
-                formatted = `${hour}:${minute} ${ampm}`;
-            } else {
-                formatted = pickupTime; // fallback, show as typed
-            }
-        }
-        document.getElementById('summary-pickup-time').textContent = formatted;
-    }
-    
-    function updateTotal() {
-        let subtotal = 50.00; // Base reservation fee
-
-        // Add food cost
-        const foodCost = orderedItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-        if(foodCost > 0) {
-            document.getElementById('food-cost-row').classList.remove('hidden');
-            document.getElementById('food-cost').textContent = `$${foodCost.toFixed(2)}`;
-            subtotal += foodCost;
-        } else {
-            document.getElementById('food-cost-row').classList.add('hidden');
-        }
-
-        // Add pickup cost
-        if(document.getElementById('pickup-yes').checked) {
-            const vehicleSelect = document.getElementById('vehicle-type');
-            const selectedOption = vehicleSelect.options[vehicleSelect.selectedIndex];
-            const pricePerKm = parseInt(selectedOption.dataset.price);
-            const pickupCost = pricePerKm * currentDistance;
-            
-            document.getElementById('pickup-cost-row').classList.remove('hidden');
-            document.getElementById('pickup-cost-summary').textContent = `$${pickupCost.toLocaleString()}`;
-            subtotal += pickupCost;
-        } else {
-            document.getElementById('pickup-cost-row').classList.add('hidden');
-        }
-        
-        // Calculate tax and total
-        const tax = subtotal * 0.10;
-        const total = subtotal + tax;
-        
-        // Update display
-        document.getElementById('tax-amount').textContent = `$${tax.toFixed(2)}`;
-        document.getElementById('summary-total').textContent = `$${total.toLocaleString()}`;
+        const pickupTime = document.getElementById('pickup-time');
+        const selectedTime = pickupTime.options[pickupTime.selectedIndex].text;
+        document.getElementById('summary-pickup-time').textContent = selectedTime;
     }
     
     // Fungsi untuk set pickup location ke USU
@@ -903,4 +1051,215 @@ document.addEventListener('DOMContentLoaded', function() {
     updateSummary();
     updatePickupCost();
 });
+
+// Update hidden fields before form submission
+document.getElementById('reservation-form').addEventListener('submit', function(e) {
+    document.getElementById('pickup_cost').value = parseFloat(document.getElementById('pickup-cost').textContent.replace(/[^0-9.-]+/g,""));
+    document.getElementById('food_cost').value = parseFloat(document.getElementById('food-cost').textContent.replace(/[^0-9.-]+/g,""));
+    document.getElementById('ordered_items').value = JSON.stringify(orderedItems);
+});
+
+// Add this calendar script
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.getElementById('date');
+    const calendarPopup = document.getElementById('calendar-popup');
+    const prevMonth = document.getElementById('prev-month');
+    const nextMonth = document.getElementById('next-month');
+    const currentMonthDisplay = document.getElementById('current-month');
+    const calendarDays = document.getElementById('calendar-days');
+
+    let currentDate = new Date();
+    let selectedDate = new Date(currentDate);
+    selectedDate.setDate(selectedDate.getDate() + 1); // Set default to tomorrow
+
+    // Show calendar when clicking input
+    dateInput.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        calendarPopup.style.display = 'block';
+        renderCalendar();
+    });
+
+    // Hide calendar when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!calendarPopup.contains(e.target) && e.target !== dateInput) {
+            calendarPopup.style.display = 'none';
+        }
+    });
+
+    // Month navigation
+    prevMonth.addEventListener('click', function(e) {
+        e.stopPropagation();
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
+    });
+
+    nextMonth.addEventListener('click', function(e) {
+        e.stopPropagation();
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+    });
+
+    function renderCalendar() {
+        const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        // Update month display
+        currentMonthDisplay.textContent = firstDay.toLocaleDateString('en-US', {
+            month: 'long',
+            year: 'numeric'
+        });
+
+        calendarDays.innerHTML = '';
+        
+        // Add empty cells for days before first day of month
+        for (let i = 0; i < firstDay.getDay(); i++) {
+            const emptyCell = document.createElement('div');
+            calendarDays.appendChild(emptyCell);
+        }
+
+        // Add calendar days
+        for (let day = 1; day <= lastDay.getDate(); day++) {
+            const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+            const dayCell = document.createElement('div');
+            const isDisabled = date < today;
+            const isSelected = date.toDateString() === selectedDate.toDateString();
+
+            dayCell.className = `text-center p-2 rounded-full text-sm
+                ${isDisabled ? 'text-gray-600 cursor-not-allowed' : 'cursor-pointer hover:bg-gold/20 text-gold'}
+                ${isSelected ? 'bg-gold text-black font-bold' : ''}`;
+            dayCell.textContent = day;
+
+            if (!isDisabled) {
+                dayCell.addEventListener('click', () => selectDate(date));
+            }
+
+            calendarDays.appendChild(dayCell);
+        }
+    }
+
+    function selectDate(date) {
+        selectedDate = date;
+        dateInput.value = formatDate(date);
+        calendarPopup.style.display = 'none';
+        dateInput.dispatchEvent(new Event('change')); // Trigger change event
+    }
+
+    function formatDate(date) {
+        return date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    // Set initial date
+    dateInput.value = formatDate(selectedDate);
+});
 </script>
+
+<style>
+    /* Updated Calendar Styling */
+    .calendar-dropdown {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        background: #1a1a1a;
+        border: 2px solid #FFD700;
+        border-radius: 8px;
+        padding: 1rem;
+        width: 300px;
+        box-shadow: 0 4px 20px rgba(255, 215, 0, 0.2);
+        z-index: 50;
+        display: none;
+    }
+
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        color: #FFD700;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+        text-align: center;
+    }
+
+    .calendar-grid > div {
+        padding: 0.5rem;
+        color: #FFD700;
+    }
+
+    .calendar-day {
+        cursor: pointer;
+        border-radius: 4px;
+        padding: 0.5rem;
+        transition: all 0.2s;
+    }
+
+    .calendar-day:hover:not(.disabled) {
+        background: rgba(255, 215, 0, 0.2);
+    }
+
+    .calendar-day.selected {
+        background: #FFD700;
+        color: #000;
+        font-weight: bold;
+    }
+
+    .calendar-day.disabled {
+        color: #666;
+        cursor: not-allowed;
+    }
+
+    .calendar-day.today {
+        border: 1px solid #FFD700;
+    }
+
+    /* Custom Calendar Styling */
+    .calendar-day {
+        transition: all 0.2s ease;
+    }
+
+    .calendar-day:not(.disabled):hover {
+        background-color: rgba(255, 215, 0, 0.2);
+    }
+
+    #calendar-popup {
+    width: 300px;
+    background: #1a1a1a;
+    border: 2px solid #FFD700;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(255, 215, 0, 0.2);
+    z-index: 1000;
+}
+
+#calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+#current-month {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+#prev-month, #next-month {
+    font-size: 1.5rem;
+    padding: 0 8px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+#prev-month:hover, #next-month:hover {
+    color: white;
+}
+</style>
