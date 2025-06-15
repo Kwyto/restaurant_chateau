@@ -22,22 +22,16 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Château Lumière | Luxury Fine Dining</title>
     
-    <!-- Tailwind CSS -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
-    <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="<?php echo $base_path; ?>assets/css/main.css">
     
-    <!-- AOS Animation Library -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     
     <style>
@@ -73,28 +67,39 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
             background-color: black;
             border-bottom: 1px solid #1f2937;
         }
+
+        /* Style untuk link yang dinonaktifkan */
+        .disabled-link {
+            opacity: 0.5;
+            cursor: not-allowed;
+            position: relative;
+        }
     </style>
 </head>
 <body class="bg-black text-white font-sans">
-    <!-- Navigation -->
     <nav class="fixed w-full z-50 bg-black border-b border-gray-800 transition-all duration-500 ease-in-out transform hover:shadow-lg hover:shadow-gold/20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
-                <!-- Logo -->
                 <div class="flex-shrink-0 flex items-center">
                     <a href="<?php echo $base_path; ?>index.php" class="text-2xl font-serif font-bold text-gold hover:text-gold-dark transition duration-500">Château Lumière</a>
                 </div>
                 
-                <!-- Desktop Menu -->
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="<?php echo $base_path; ?>index.php" class="text-white hover:text-gold transition duration-300 relative group">
                         Home
                         <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
                     </a>
-                    <a href="<?php echo $base_path; ?>pages/reservation.php" class="text-white hover:text-gold transition duration-300 relative group">
-                        Reservations
-                        <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
-                    </a>
+                    
+                    <?php if(isset($_SESSION['user_id'])): ?>
+                        <a href="<?php echo $base_path; ?>pages/reservation.php" class="text-white hover:text-gold transition duration-300 relative group">
+                            Reservations
+                            <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
+                        </a>
+                    <?php else: ?>
+                        <a href="#" class="text-white transition duration-300 relative group disabled-link" title="Please login to make a reservation">
+                            Reservations
+                            <span class="absolute bottom-0 left-0 w-full h-px bg-transparent"></span> </a>
+                    <?php endif; ?>
                     <a href="<?php echo $base_path; ?>pages/menu.php" class="text-white hover:text-gold transition duration-300 relative group">
                         Menu
                         <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
@@ -111,7 +116,7 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
                     <?php if(isset($_SESSION['user_id'])): ?>
                         <div class="relative dropdown">
                             <a href="<?php echo $base_path; ?>pages/profile" class="flex items-center gap-2 text-gold hover:text-gold-dark transition duration-300">
-                                <span><?php echo $_SESSION['user_name']; ?></span>
+                                <span><?php echo htmlspecialchars($_SESSION['user_name']); ?></span>
                                 <i class="fas fa-chevron-down text-xs transition-transform duration-300 group-hover:rotate-180"></i>
                             </a>
                             <div class="dropdown-menu absolute right-0 mt-2 w-48 bg-black border border-gray-800 rounded-md shadow-lg py-1 z-50">
@@ -126,7 +131,6 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
                     <?php endif; ?>
                 </div>
                 
-                <!-- Mobile menu button -->
                 <div class="md:hidden flex items-center">
                     <button type="button" class="mobile-menu-button p-2 rounded-md text-white hover:text-gold focus:outline-none transition duration-300">
                         <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -137,11 +141,15 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
             </div>
         </div>
         
-        <!-- Mobile menu -->
         <div class="mobile-menu hidden md:hidden bg-black border-t border-gray-800 transition-all duration-300 ease-in-out">
             <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                 <a href="<?php echo $base_path; ?>index.php" class="block px-3 py-2 text-white hover:text-gold transition duration-300">Home</a>
-                <a href="<?php echo $base_path; ?>pages/home.php" class="block px-3 py-2 text-white hover:text-gold transition duration-300">Reservations</a>
+                
+                <?php if(isset($_SESSION['user_id'])): ?>
+                    <a href="<?php echo $base_path; ?>pages/reservation.php" class="block px-3 py-2 text-white hover:text-gold transition duration-300">Reservations</a>
+                <?php else: ?>
+                    <a href="#" class="block px-3 py-2 text-white disabled-link" onclick="alert('Please login to make a reservation'); return false;">Reservations</a>
+                <?php endif; ?>
                 <a href="<?php echo $base_path; ?>pages/menu.php" class="block px-3 py-2 text-white hover:text-gold transition duration-300">Menu</a>
                 <a href="<?php echo $base_path; ?>pages/about.php" class="block px-3 py-2 text-white hover:text-gold transition duration-300">About</a>
                 <a href="<?php echo $base_path; ?>pages/contact.php" class="block px-3 py-2 text-white hover:text-gold transition duration-300">Contact</a>
@@ -156,7 +164,6 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
         </div>
     </nav>
 
-    <!-- Add padding to body to account for fixed header -->
     <div class="pt-16">
     
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -181,14 +188,18 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
         });
         
         document.addEventListener('DOMContentLoaded', function() {
-            const header = document.querySelector('header');
+            // Note: The original code had a 'header' selector which doesn't exist.
+            // I'm assuming you meant the 'nav' element.
+            const nav = document.querySelector('nav'); 
             
-            window.addEventListener('scroll', function() {
-                if (window.scrollY > 0) {
-                    header.classList.add('header-solid');
-                } else {
-                    header.classList.remove('header-solid');
-                }
-            });
+            if (nav) { // Check if nav element exists
+                window.addEventListener('scroll', function() {
+                    if (window.scrollY > 0) {
+                        nav.classList.add('header-solid');
+                    } else {
+                        nav.classList.remove('header-solid');
+                    }
+                });
+            }
         });
     </script>
