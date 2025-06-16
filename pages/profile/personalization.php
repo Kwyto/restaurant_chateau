@@ -12,22 +12,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $favorite_cuisines = isset($_POST['cuisines']) ? implode(',', $_POST['cuisines']) : '';
     $preferred_seating = $_POST['seating'] ?? '';
     $dietary_restrictions = isset($_POST['dietary']) ? implode(',', $_POST['dietary']) : '';
-    $special_requests = $_POST['special_requests'] ?? '';
+    // $special_requests = $_POST['special_requests'] ?? ''; // DIHAPUS
     
     // Update user preferences
+    // Menghapus baris 'special_requests = ?' dari query
     $update_query = "UPDATE users SET 
-                    favorite_cuisines = ?,
-                    preferred_seating = ?,
-                    dietary_restrictions = ?,
-                    special_requests = ?
-                    WHERE id = ?";
-                    
+                        favorite_cuisines = ?,
+                        preferred_seating = ?,
+                        dietary_restrictions = ?
+                        WHERE id = ?";
+                        
     $stmt = mysqli_prepare($conn, $update_query);
-    mysqli_stmt_bind_param($stmt, "ssssi", 
+    // Menghapus 's' untuk special_requests dan variabelnya dari bind_param
+    mysqli_stmt_bind_param($stmt, "sssi", 
         $favorite_cuisines, 
         $preferred_seating,
         $dietary_restrictions,
-        $special_requests,
         $_SESSION['user_id']
     );
     
@@ -43,7 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Fetch user preferences
 $user_id = $_SESSION['user_id'];
-$query = "SELECT favorite_cuisines, preferred_seating, dietary_restrictions, special_requests 
+// Menghapus 'special_requests' dari query SELECT
+$query = "SELECT favorite_cuisines, preferred_seating, dietary_restrictions 
           FROM users WHERE id = ?";
 $stmt = mysqli_prepare($conn, $query);
 mysqli_stmt_bind_param($stmt, "i", $user_id);
@@ -61,13 +62,10 @@ include '../../includes/header.php';
 
 <main class="min-h-screen bg-black text-white">
     <div class="max-w-7xl mx-auto py-12 px-4">
-        <!-- Profile Header -->
         <?php include 'komponen/profile.php'; ?>
         
-        <!-- Profile Navigation -->
         <?php include 'komponen/navigasi.php'; ?>
         
-        <!-- Personalization Content -->
         <div class="border border-gray-800 p-8">
             <h2 class="text-2xl font-serif font-bold mb-6">Dining Preferences</h2>
             
@@ -161,14 +159,6 @@ include '../../includes/header.php';
                         </div>
                         <?php endforeach; ?>
                     </div>
-                </div>
-                
-                <div class="mb-8">
-                    <h3 class="text-lg font-medium mb-4">Special Requests</h3>
-                    <textarea name="special_requests" 
-                              rows="4" 
-                              class="w-full bg-black border border-gray-800 py-3 px-4 focus:outline-none focus:ring-gold focus:border-gold" 
-                              placeholder="Any special requests we should know about?"><?php echo htmlspecialchars($user['special_requests'] ?? ''); ?></textarea>
                 </div>
                 
                 <button type="submit" class="px-8 py-3 bg-gold text-black hover:bg-transparent hover:text-gold hover:border hover:border-gold transition duration-300">
