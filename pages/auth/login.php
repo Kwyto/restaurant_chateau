@@ -44,10 +44,7 @@ if (isset($_SESSION['user_id'])) {
                     <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 text-gold focus:ring-gold border-gray-300 rounded">
                     <label for="remember-me" class="ml-2 block text-sm">Remember me</label>
                 </div>
-
-                <div class="text-sm">
-                    <a href="#" class="font-medium text-gold hover:text-gold">Forgot your password?</a>
-                </div>
+                
             </div>
 
             <div>
