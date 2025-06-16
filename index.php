@@ -788,7 +788,8 @@ function getGreeting()
                         Login
                     </a>
                 <?php endif; ?>
-                <a href="pages/reservation.php" class="reservation-btn px-10 py-5 bg-gradient-to-r from-gold to-gold-light text-black hover:from-gold-light hover:to-gold transition-all duration-700 font-medium tracking-wide transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-gold/40">
+                
+                <a href="<?php echo isset($_SESSION['user_id']) ? 'pages/reservation.php' : 'pages/auth/login.php'; ?>" class="reservation-btn px-10 py-5 bg-gradient-to-r from-gold to-gold-light text-black hover:from-gold-light hover:to-gold transition-all duration-700 font-medium tracking-wide transform hover:-translate-y-1 hover:shadow-2xl hover:shadow-gold/40">
                     Make a Reservation
                 </a>
             </div>
