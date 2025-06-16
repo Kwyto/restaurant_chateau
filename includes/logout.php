@@ -11,5 +11,5 @@ $_SESSION = array();
 session_destroy();
 
 // Redirect to home page
-header("Location: /restaurant/index.php");
+header("Location: ../index.php");
 exit();
