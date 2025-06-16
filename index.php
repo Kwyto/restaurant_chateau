@@ -1155,17 +1155,14 @@ function getGreeting()
 
     // Luxury Loading Animation
     window.addEventListener('load', () => {
-        const loader = document.querySelector('.luxury-loader');
-        if(loader) {
+        setTimeout(() => {
+            document.querySelector('.luxury-loader').style.opacity = '0';
             setTimeout(() => {
-                loader.style.opacity = '0';
-                setTimeout(() => {
-                    loader.style.display = 'none';
-                }, 1500);
-            }, 2000);
-        }
+                document.querySelector('.luxury-loader').style.display = 'none';
+            }, 1500);
+        }, 2000);
     });
-
+    
     // Luxury Image Lazy Loading
     const luxuryImages = document.querySelectorAll('img');
     const luxuryImageObserver = new IntersectionObserver((entries, observer) => {
