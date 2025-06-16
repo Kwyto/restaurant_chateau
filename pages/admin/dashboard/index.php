@@ -1,5 +1,16 @@
 <?php 
 
+session_start();
+
+if(!isset($_SESSION['user_id'])) {
+    header('Location: ../../auth/login.php');
+}
+
+if ($_SESSION['user_role'] !== 'admin') {
+    header("Location: ../../access-denied.php");
+    exit();
+}
+
 include '../includes/config.php';
 $users = getCustomers($conn);
 $menu = getMenuItems($conn, limit:5);

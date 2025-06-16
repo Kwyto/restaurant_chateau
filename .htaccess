@@ -1,0 +1,8 @@
+Options -Indexes
+
+# Redirect to 403 if trying to access admin area without authorization
+RewriteEngine On
+RewriteCond %{REQUEST_URI} ^/pages/admin [NC]
+RewriteCond %{HTTP_COOKIE} !PHPSESSID [OR]
+RewriteCond %{HTTP_COOKIE} PHPSESSID=^$
+RewriteRule ^ - [F,L]

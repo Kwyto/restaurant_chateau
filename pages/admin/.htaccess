@@ -1,0 +1,13 @@
+# Disable directory listing
+Options -Indexes
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Block direct access to sensitive directories
+RewriteEngine On
+RewriteRule ^(components|includes)/ - [F,L]
