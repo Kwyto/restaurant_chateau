@@ -1,7 +1,7 @@
 <?php
 include '../../includes/config.php';
 
-// Aktifkan error reporting
+// Aktifkan error reporting untuk debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -10,8 +10,17 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Tambahkan ini: Ambil data user untuk mendapatkan path foto lama
+$user_id = $_SESSION['user_id'];
+$query_get_user = "SELECT profile_photo FROM users WHERE id = ?";
+$stmt_get_user = mysqli_prepare($conn, $query_get_user);
+mysqli_stmt_bind_param($stmt_get_user, "i", $user_id);
+mysqli_stmt_execute($stmt_get_user);
+$result_user = mysqli_stmt_get_result($stmt_get_user);
+$user = mysqli_fetch_assoc($result_user);
+// Selesai penambahan
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
-    $user_id = $_SESSION['user_id'];
     $file = $_FILES['profile_photo'];
     
     // Validasi file
@@ -30,8 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
         exit();
     }
     
-    // Path upload yang benar
-    $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/profiles/';
+    // PERBAIKAN: Path upload yang benar relatif terhadap root proyek
+    
+    $project_root = dirname(__DIR__, 2); 
+    $upload_dir = $project_root . '/uploads/profiles/';
     
     // Buat folder jika belum ada
     if (!file_exists($upload_dir)) {
@@ -56,21 +67,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
     $filename = 'profile_' . $user_id . '_' . time() . '.' . $extension;
     $filepath = $upload_dir . $filename;
     
-    // Debug path
-    error_log("Attempting to upload to: " . $filepath);
-    
     // Coba upload file
     if (move_uploaded_file($file['tmp_name'], $filepath)) {
-        // Verifikasi file benar-benar ada
-        if (!file_exists($filepath)) {
-            $_SESSION['error'] = "File berhasil diupload tetapi tidak ditemukan di lokasi tujuan!";
-            error_log("File not found after upload: " . $filepath);
-            header("Location: settings.php");
-            exit();
-        }
-        
-        // Path untuk web
-        $relative_path = '/uploads/profiles/' . $filename;
+        // Path untuk web (disimpan di database)
+        $relative_path = '/restaurant_chateau/uploads/profiles/' . $filename;
         
         // Update database
         $query = "UPDATE users SET profile_photo = ? WHERE id = ?";
@@ -78,11 +78,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
         mysqli_stmt_bind_param($stmt, "si", $relative_path, $user_id);
         
         if (mysqli_stmt_execute($stmt)) {
-            // Hapus foto lama jika ada
+            // Hapus foto lama jika ada dan bukan foto default
             if (!empty($user['profile_photo'])) {
-                $old_file = $_SERVER['DOCUMENT_ROOT'] . $user['profile_photo'];
-                if (file_exists($old_file)) {
-                    unlink($old_file);
+                $old_file_path = $project_root . str_replace('/restaurant_chateau', '', $user['profile_photo']);
+                if (file_exists($old_file_path)) {
+                    unlink($old_file_path);
                 }
             }
             $_SESSION['success'] = "Foto profil berhasil diupdate!";
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
         }
     } else {
         $error = error_get_last();
-        $_SESSION['error'] = "Gagal upload file. Error: " . $error['message'];
+        $_SESSION['error'] = "Gagal upload file. Cek permission folder. Error: " . ($error['message'] ?? 'Unknown error');
         error_log("Upload error: " . print_r($error, true));
     }
 }

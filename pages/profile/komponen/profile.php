@@ -16,9 +16,9 @@ mysqli_stmt_execute($count_stmt);
 $total_reservations = mysqli_fetch_assoc(mysqli_stmt_get_result($count_stmt))['total'];
 
 
-// Add membership badge
+// MODIFIKASI: Menggunakan null coalescing operator (??) untuk mencegah error jika membership_level adalah NULL.
 $membership_badge = '<span class="px-4 py-1 bg-gold/10 text-gold rounded-full text-sm">' . 
-    ucfirst(htmlspecialchars($user['membership_level'])) . ' Member</span>';
+    ucfirst(htmlspecialchars($user['membership_level'] ?? '')) . ' Member</span>';
 
 ?>
         <div class="flex flex-col md:flex-row items-start md:items-center gap-8 mb-12">
@@ -26,15 +26,14 @@ $membership_badge = '<span class="px-4 py-1 bg-gold/10 text-gold rounded-full te
                 <div class="w-32 h-32 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden border-2 border-gold cursor-pointer transition-all duration-300 hover:opacity-75"
                      onclick="document.getElementById('profilePhotoInput').click()">
                     <?php if (!empty($user['profile_photo'])): ?>
-                        <img src="<?php echo htmlspecialchars($user['profile_photo']); ?>" 
+                        <img src="<?php echo htmlspecialchars($user['profile_photo'] ?? ''); ?>" 
                              alt="Profile Photo" 
                              class="w-full h-full object-cover"
                              onerror="this.onerror=null; this.src='../../assets/images/default-profile.png';">
                     <?php else: ?>
-                        <span class="text-4xl"><?php echo strtoupper(substr($user['first_name'], 0, 1)); ?></span>
+                        <span class="text-4xl"><?php echo strtoupper(substr($user['first_name'] ?? '', 0, 1)); ?></span>
                     <?php endif; ?>
                     
-                    <!-- Hover tooltip -->
                     <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full">
                         <div class="text-white text-sm text-center px-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -48,9 +47,9 @@ $membership_badge = '<span class="px-4 py-1 bg-gold/10 text-gold rounded-full te
             </div>
             <div>
                 <h1 class="text-4xl font-serif font-bold mb-2">
-                    <?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?>
+                    <?php echo htmlspecialchars(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')); ?>
                 </h1>
-                <p class="text-gray-400 mb-4">Member since <?php echo date('F Y', strtotime($user['created_at'])); ?></p>
+                <p class="text-gray-400 mb-4">Member since <?php echo !empty($user['created_at']) ? date('F Y', strtotime($user['created_at'])) : 'N/A'; ?></p>
                 <div class="flex flex-wrap gap-4">
                     <?php echo $membership_badge; ?>
                     <span class="px-4 py-1 bg-gray-800 rounded-full text-sm">
