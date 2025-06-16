@@ -10,11 +10,26 @@ if (!isset($_SESSION['user_id'])) {
 // Get user data with membership info
 $user_id = $_SESSION['user_id'];
 
+// Ambil data lengkap pengguna, termasuk membership_level dari database
+$user_query = "SELECT * FROM users WHERE id = ?"; // PENTING: Ganti 'users' jika nama tabel pengguna Anda berbeda
+$user_stmt = mysqli_prepare($conn, $user_query);
+mysqli_stmt_bind_param($user_stmt, "i", $user_id);
+mysqli_stmt_execute($user_stmt);
+$user_result = mysqli_stmt_get_result($user_stmt);
+$user = mysqli_fetch_assoc($user_result);
+
+// Pengecekan jika data user tidak ditemukan (sangat disarankan)
+if (!$user) {
+    // Jika data user tidak ada, hancurkan session dan paksa login ulang.
+    session_destroy();
+    header("Location: ../auth/login.php");
+    exit();
+}
+
 
 // Modify the available coupons query to check membership level
 $available_coupons_query = "
-    SELECT c.* 
-    FROM coupons c
+    SELECT c.* FROM coupons c
     WHERE c.expiration_date >= CURRENT_DATE
     AND NOT EXISTS (
         SELECT 1 
@@ -29,8 +44,7 @@ $available_coupons_query = "
             OR (c.membership_required = 'platinum' AND ? = 'platinum')
         )
     )
-    ORDER BY RAND()
-    LIMIT 3";
+    ORDER BY c.membership_required DESC, c.discount_value DESC"; // Mengurutkan berdasarkan membership dan diskon;
 $stmt = mysqli_prepare($conn, $available_coupons_query);
 mysqli_stmt_bind_param($stmt, "iss", $user_id, $user['membership_level'], $user['membership_level']);
 mysqli_stmt_execute($stmt);
@@ -42,9 +56,9 @@ if (isset($_POST['claim_coupon'])) {
     
     // Check coupon membership requirement
     $check_query = "SELECT c.*, 
-                   EXISTS(SELECT 1 FROM user_coupons uc WHERE uc.user_id = ? AND uc.coupon_id = ?) as already_claimed
-                   FROM coupons c 
-                   WHERE c.id = ?";
+                           EXISTS(SELECT 1 FROM user_coupons uc WHERE uc.user_id = ? AND uc.coupon_id = ?) as already_claimed
+                           FROM coupons c 
+                           WHERE c.id = ?";
     $check_stmt = mysqli_prepare($conn, $check_query);
     mysqli_stmt_bind_param($check_stmt, "iii", $user_id, $coupon_id, $coupon_id);
     mysqli_stmt_execute($check_stmt);
@@ -74,12 +88,12 @@ if (isset($_POST['claim_coupon'])) {
     exit();
 }
 
-// Get user's coupons
+// Get user's ACTIVE coupons (coupons that have not been used)
 $user_coupons_query = "
     SELECT c.*, uc.used, uc.id as user_coupon_id 
     FROM coupons c
     INNER JOIN user_coupons uc ON c.id = uc.coupon_id
-    WHERE uc.user_id = ?
+    WHERE uc.user_id = ? AND uc.used = 0
     ORDER BY c.expiration_date DESC";
 $stmt = mysqli_prepare($conn, $user_coupons_query);
 mysqli_stmt_bind_param($stmt, "i", $user_id);
@@ -91,13 +105,10 @@ include '../../includes/header.php';
 
 <main class="min-h-screen bg-black text-white">
     <div class="max-w-7xl mx-auto py-12 px-4">
-        <!-- Profile Header -->
         <?php include 'komponen/profile.php'; ?>
         
-        <!-- Profile Navigation -->
         <?php include 'komponen/navigasi.php'; ?>
         
-        <!-- Coupons Content -->
         <div class="border border-gray-800 p-8">
             <h2 class="text-2xl font-serif font-bold mb-6">Your Coupons</h2>
             
@@ -120,51 +131,54 @@ include '../../includes/header.php';
             <?php endif; ?>
             
             <div class="grid md:grid-cols-2 gap-6 mb-12">
-                <!-- User's Coupons -->
-                <?php while ($coupon = mysqli_fetch_assoc($user_coupons)): ?>
-                    <div class="border <?php echo $coupon['used'] ? 'border-gray-700 opacity-70' : 'border-gold'; ?> p-6 relative overflow-hidden">
-                        <?php if (!$coupon['used'] && strtotime($coupon['expiration_date']) >= time()): ?>
-                            <div class="absolute top-0 right-0 bg-gold text-black px-3 py-1 text-sm font-medium rotate-45 translate-x-8 -translate-y-2 w-32 text-center">
-                                ACTIVE
+                <?php if (mysqli_num_rows($user_coupons) > 0): ?>
+                    <?php while ($coupon = mysqli_fetch_assoc($user_coupons)): ?>
+                        <?php
+                        // Cek apakah kupon ini adalah kupon membership
+                        $is_permanent_coupon = in_array($coupon['membership_required'], ['gold', 'platinum']);
+                        ?>
+                        <div class="border border-gold p-6 relative overflow-hidden">
+                            <?php // Label 'ACTIVE' atau 'MEMBER' di pojok kanan atas ?>
+                            <div class="absolute top-0 right-0 bg-gold text-black px-3 py-1 text-sm font-medium">
+                                <?php echo $is_permanent_coupon ? 'MEMBER' : 'ACTIVE'; ?>
                             </div>
-                        <?php endif; ?>
-                        
-                        <div class="flex justify-between items-start mb-4">
-                            <h3 class="text-xl font-serif font-bold"><?php echo htmlspecialchars($coupon['description']); ?></h3>
-                            <span class="px-3 py-1 <?php echo $coupon['used'] ? 'bg-gray-800' : 'bg-gold/10 text-gold'; ?> text-sm rounded-full">
-                                <?php 
-                                if ($coupon['used']) {
-                                    echo 'Used';
-                                } elseif (strtotime($coupon['expiration_date']) < time()) {
-                                    echo 'Expired';
-                                } else {
-                                    echo 'Active';
-                                }
-                                ?>
-                            </span>
-                        </div>
-                        
-                        <p class="text-gray-400 mb-6">
-                            <?php echo $coupon['discount_value']; ?>% off
-                        </p>
-                        
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <span class="block text-sm text-gray-400">Valid until</span>
-                                <span class="font-medium"><?php echo date('F d, Y', strtotime($coupon['expiration_date'])); ?></span>
-                            </div>
-                            <div class="text-right">
-                                <span class="block text-sm text-gray-400">Code</span>
-                                <span class="font-mono font-bold <?php echo $coupon['used'] ? 'line-through text-gray-400' : 'text-gold'; ?>">
-                                    <?php echo htmlspecialchars($coupon['code']); ?>
+                            
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="text-xl font-serif font-bold"><?php echo htmlspecialchars($coupon['description']); ?></h3>
+                                <span class="px-3 py-1 bg-gold/10 text-gold text-sm rounded-full">
+                                    <?php 
+                                    if (strtotime($coupon['expiration_date']) < time()) {
+                                        echo 'Expired';
+                                    } else {
+                                        echo 'Active';
+                                    }
+                                    ?>
                                 </span>
                             </div>
+                            
+                            <p class="text-gray-400 mb-6">
+                                <?php echo $coupon['discount_value']; ?>% off
+                            </p>
+                            
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="block text-sm text-gray-400">Valid until</span>
+                                    <span class="font-medium"><?php echo date('F d, Y', strtotime($coupon['expiration_date'])); ?></span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="block text-sm text-gray-400">Code</span>
+                                    <span class="font-mono font-bold text-gold">
+                                        <?php echo htmlspecialchars($coupon['code']); ?>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                <?php endwhile; ?>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <p class="text-gray-400 md:col-span-2">You don't have any active coupons right now. Claim one below!</p>
+                <?php endif; ?>
             </div>
             
-            <!-- Available Coupons -->
             <?php if (mysqli_num_rows($available_coupons) > 0): ?>
                 <div class="border-t border-gray-800 pt-8 mb-12">
                     <h3 class="text-xl font-serif font-bold mb-6">Available Coupons</h3>
@@ -190,13 +204,10 @@ include '../../includes/header.php';
                                     <form method="POST">
                                         <input type="hidden" name="coupon_id" value="<?php echo $coupon['id']; ?>">
                                         <button type="submit" name="claim_coupon" 
-                                                class="px-4 py-2 <?php echo $coupon['membership_required'] ? 
-                                                    'bg-' . $coupon['membership_required'] . '-900/50 text-' . $coupon['membership_required'] . '-400 border-' . $coupon['membership_required'] . '-400' : 
-                                                    'bg-gold text-black hover:bg-transparent hover:text-gold border-gold'; ?> 
-                                                    border transition duration-300 text-sm">
+                                                class="px-4 py-2 bg-gold text-black hover:bg-transparent hover:text-gold border-gold border transition duration-300 text-sm">
                                             Claim Now
                                         </button>
-                                    </form>
+                                        </form>
                                 </div>
                             </div>
                         <?php endwhile; ?>
