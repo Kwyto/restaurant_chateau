@@ -89,11 +89,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['book_reservation'])) {
 
         // Store reservation data in session for next step
         $_SESSION['reservation_data'] = [
-            'id' => $reservationId,
-            'guests' => $guests,
-            'date' => $date,
-            'time' => $time
-        ];
+    'id' => $reservationId,
+    'guests' => $guests,
+    'date' => $date,
+    'time' => $time,
+    'occasion' => $occasion // <-- TAMBAHKAN BARIS INI
+];
 
         // Redirect to seat selection
         header("Location: seat-selection.php");

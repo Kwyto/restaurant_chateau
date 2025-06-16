@@ -40,7 +40,7 @@ if(!isset($_SESSION['user_id'])) {
 }
 // Cek jika tidak ada data reservasi DAN tidak ada proses pembayaran yang baru saja berhasil
 if (!isset($_SESSION['reservation_data']) && !isset($_SESSION['payment_just_completed'])) {
-    header("Location: ../pages/home.php");
+    header("Location: ../pages/reservation.php");
     exit();
 }
 // --- MODIFICATION END ---
@@ -63,13 +63,32 @@ if (isset($_SESSION['reservation_data'])) {
         $stmt->close();
         unset($_SESSION['reservation_data'], $_SESSION['booking_data'], $_SESSION['applied_coupon'], $_SESSION['payment_start_time']);
         $_SESSION['error_message'] = "Waktu pembayaran telah habis. Reservasi Anda telah dibatalkan.";
-        header("Location: ../pages/home.php");
+        header("Location: ../pages/reservation.php");
         exit();
     }
 }
 // --- END: LOGIKA COUNTDOWN ---
 
 $userData = getUserData($conn, $_SESSION['user_id']);
+
+// --- START: PERBAIKAN - Ambil data reservasi lengkap dari database ---
+// Ini untuk memastikan data seperti pickup_cost dan pickup_service tersedia, 
+// bahkan jika tidak semua data disimpan di sesi dari halaman sebelumnya.
+if (isset($_SESSION['reservation_data']['id'])) {
+    $reservation_id = $_SESSION['reservation_data']['id'];
+    $stmt_get_full_res = $conn->prepare("SELECT * FROM reservations WHERE id = ?");
+    $stmt_get_full_res->bind_param("i", $reservation_id);
+    $stmt_get_full_res->execute();
+    $full_reservation_data = $stmt_get_full_res->get_result()->fetch_assoc();
+    $stmt_get_full_res->close();
+    
+    // Jika data ditemukan di DB, gabungkan dengan data sesi untuk mendapatkan informasi terlengkap
+    if ($full_reservation_data) {
+        $_SESSION['reservation_data'] = array_merge($_SESSION['reservation_data'], $full_reservation_data);
+    }
+}
+// --- END: PERBAIKAN ---
+
 // --- MODIFICATION START: Inisialisasi variabel bahkan jika sesi tidak ada, untuk mencegah error pada tampilan setelah pembayaran ---
 $reservation = $_SESSION['reservation_data'] ?? [];
 // --- MODIFICATION END ---
@@ -77,11 +96,16 @@ $reservation = $_SESSION['reservation_data'] ?? [];
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['selected-table']) && !isset($_POST['apply_coupon']) && !isset($_POST['remove_coupon'])) {
     $_SESSION['booking_data'] = $_POST;
     $_SESSION['booking_data']['selected_table_number'] = $_POST['selected-table'];
+    
+    // --- PERBAIKAN TIMER ---
+    // Reset timer setiap kali pengguna masuk ke halaman pembayaran dari pemilihan meja.
+    // Ini memastikan countdown selalu mulai dari awal untuk setiap reservasi baru.
+    unset($_SESSION['payment_start_time']);
+    
     header("Location: payment.php");
     exit();
 }
 
-$table_number = $_POST['selected-table'];
 $booking = $_SESSION['booking_data'] ?? [];
 $pickup_service_status = $reservation['pickup_service'] ?? 0;
 $pickupCost = $reservation['pickup_cost'] ?? 0.00;
@@ -163,20 +187,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['payment-method']) && i
     $reservation_id = $reservation['id'];
     $user_id = $_SESSION['user_id'];
     $final_amount_paid = $grandTotal;
+    $selected_table = $booking['selected_table_number'] ?? null;
 
     $conn->begin_transaction();
     try {
         $stmt_payment = $conn->prepare("INSERT INTO payments (user_id, reservation_id, amount, payment_method) VALUES (?, ?, ?, ?)");
         $stmt_payment->bind_param("iids", $user_id, $reservation_id, $final_amount_paid, $payment_method);
         $stmt_payment->execute();
-
         if ($stmt_payment->affected_rows > 0) {
-            // Update both status, total_amount, AND table_number
+            // Update reservations dengan total_amount dan table_number
             $stmt_update_reservation = $conn->prepare("UPDATE reservations SET status = 'completed', total_amount = ?, table_number = ? WHERE id = ?");
-            $selectedTableNumber = $_SESSION['booking_data']['selected_table_number'] ?? null;
-            $stmt_update_reservation->bind_param("dii", $final_amount_paid, $selectedTableNumber, $reservation_id);
+            $stmt_update_reservation->bind_param("dii", $final_amount_paid, $selected_table, $reservation_id);
             $stmt_update_reservation->execute();
-
+            
             if ($stmt_update_reservation->affected_rows > 0) {
                 if (isset($_SESSION['applied_coupon'])) {
                     $userCouponIdToMark = $_SESSION['applied_coupon']['user_coupon_id'];
@@ -187,10 +210,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['payment-method']) && i
                 }
                 $conn->commit();
                 
-                // --- MODIFICATION START: Atur flag untuk memicu popup, alih-alih redirect ---
                 $show_success_popup = true;
-                $_SESSION['payment_just_completed'] = true; // Flag untuk mencegah redirect di awal
-                // --- MODIFICATION END ---
+                $_SESSION['payment_just_completed'] = true;
 
             } else {
                 throw new Exception("Gagal memperbarui status reservasi.");
@@ -471,19 +492,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['payment-method']) && i
                     <?php elseif (isset($_POST['apply_coupon']) && empty($couponData)): ?>
                         <p class="text-red-400 text-sm mt-2">Invalid, expired, or already used coupon.</p>
                     <?php endif; ?>
-                    </div>
+                </div>
 
-                 <div class="border border-gray-800 p-6" data-aos="fade-up">
+                <div class="border border-gray-800 p-6" data-aos="fade-up">
                     <h3 class="text-lg font-medium mb-4">Reservation Details</h3>
                     <div class="space-y-3 text-gray-400">
-                        <p><strong>Reservation ID:</strong> <?php echo htmlspecialchars($reservation['id']); ?></p>
-                        <p><strong>Guests:</strong> <?php echo htmlspecialchars($reservation['guests'] . ($reservation['guests'] == 1 ? ' person' : ' people')); ?></p>
-                        <p><strong>Date:</strong> <?php echo htmlspecialchars(date('F j, Y', strtotime($reservation['date']))); ?></p>
-                        <p><strong>Time:</strong> <?php echo htmlspecialchars(date('g:i A', strtotime($reservation['time']))); ?></p>
-                        <p><strong>Occasion:</strong> <?php echo htmlspecialchars(ucfirst($reservation['occasion'])); ?></p>
+                        <p><strong>Reservation ID:</strong> <?php echo htmlspecialchars($reservation['id'] ?? 'N/A'); ?></p>
+                        <p><strong>Guests:</strong> 
+                            <?php 
+                            $guests = $reservation['guests'] ?? 0;
+                            echo htmlspecialchars($guests . ($guests == 1 ? ' person' : ' people')); 
+                            ?>
+                        </p>
+                        <p><strong>Date:</strong> <?php echo htmlspecialchars(isset($reservation['date']) ? date('F j, Y', strtotime($reservation['date'])) : 'N/A'); ?></p>
+                        <p><strong>Time:</strong> <?php echo htmlspecialchars(isset($reservation['time']) ? date('g:i A', strtotime($reservation['time'])) : 'N/A'); ?></p>
+                        <p><strong>Occasion:</strong> <?php echo htmlspecialchars(ucfirst($reservation['occasion'] ?? '-')); ?></p>
                         <p><strong>Table Number:</strong> <span class="text-gold"><?php echo htmlspecialchars($selectedTableNumber); ?></span></p>
                     </div>
                 </div>
+
             </div>
         </div>
         <?php else: ?>
@@ -568,7 +595,7 @@ document.addEventListener('DOMContentLoaded', function() {
         html: `
             <p class="text-gray-300 mb-6 -mt-2">Reservasi Anda telah sukses terkonfirmasi.</p>
             <div class="swal-custom-actions">
-                <a href="../pages/home.php" class="swal-custom-button home">Kembali ke Home</a>
+                <a href="../index.php" class="swal-custom-button home">Kembali ke Home</a>
                 <a href="../pages/profile/history.php" class="swal-custom-button profile">Lihat Riwayat Reservasi</a>
             </div>
         `,
@@ -661,7 +688,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
                     xhr.onload = function() {
                         // Redirect setelah request selesai
-                        window.location.href = '../pages/home.php';
+                        window.location.href = '../pages/reservation.php';
                     };
                     xhr.send("action=cancel_timed_out_reservation&reservation_id=" + reservationId);
                 }
