@@ -115,7 +115,7 @@ $totalPages = ceil($totalItems / $perPage);
                                         <tr>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <?php if ($item['image_path']): ?>
-                                                    <img src="<?= htmlspecialchars($item['image_path']) ?>" alt="<?= htmlspecialchars($item['name']) ?>" class="h-10 w-10 rounded-full object-cover">
+                                                    <img src=<?='../../../assets/images/menu/' . $item['image_path']?> alt="<?= htmlspecialchars($item['name']) ?>" class="h-10 w-10 rounded-full object-cover">
                                                 <?php else: ?>
                                                     <div class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
                                                         <i class="fas fa-utensils text-gray-500"></i>

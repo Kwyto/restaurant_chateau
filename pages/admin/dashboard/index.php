@@ -140,7 +140,7 @@ $coupons = getCoupon($conn, limit:3);
                     <div class="p-5 bg-white rounded-lg shadow">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-medium text-gray-900">Recent Reservations</h2>
-                            <a href="#" class="text-sm font-medium text-primary hover:text-secondary">View All</a>
+                            <a href="../reservation/" class="text-sm font-medium text-primary hover:text-secondary">View All</a>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
@@ -155,11 +155,20 @@ $coupons = getCoupon($conn, limit:3);
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     <?php while($reservation = mysqli_fetch_assoc($reservations)) : ?> 
                                         <tr>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?php echo $reservation['reservation_number'] ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?php echo $reservation['reservation_id'] ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo $reservation['first_name'] . ' ' . $reservation['last_name']; ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><?php echo $reservation['reservation_date'] . ', ' . $reservation['reservation_time'] ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800"><?php echo $reservation['status'] ?></span>
+                                                <?php 
+                                                    $statusColor = [
+                                                        'confirmed' => 'green',
+                                                        'pending' => 'yellow',
+                                                        'cancelled' => 'red'
+                                                    ][$reservation['status']] ?? 'gray';
+                                                ?>
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-<?= $statusColor ?>-100 text-<?= $statusColor ?>-800">
+                                                    <?= ucfirst($reservation['status']) ?>
+                                                </span>
                                             </td>
                                         </tr>
                                     <?php endwhile ?>
@@ -180,7 +189,7 @@ $coupons = getCoupon($conn, limit:3);
                             ?>
                                 <div class="flex items-start">
                                     <div class="flex-shrink-0 h-16 w-16 rounded-md overflow-hidden bg-gray-200">
-                                        <img src=<?php echo $item['image_path'] ?> alt="Black Truffle Pasta" class="h-full w-full object-cover">
+                                        <img src=<?= '../../../assets/images/menu/' . $item['image_path'] ?> alt="" class="h-full w-full object-cover">
                                     </div>
                                     <div class="ml-4">
                                         <h3 class="text-sm font-medium text-gray-900"><?php echo $item['name'] ?></h3>
@@ -248,6 +257,10 @@ $coupons = getCoupon($conn, limit:3);
                                             </div>
                                         </div>
                                         <div class="h-full flex justify-center items-center">
+                                            <?php $membershipColor = [
+                                                'platinum' => 'zinc',
+                                                'gold' => 'amber'
+                                            ] ?>
                                             <?php if ($customer['membership_level'] !== null) : ?>
                                                 <span class="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800"><?php echo $customer['membership_level'] ?></span>
                                             <?php endif ?>

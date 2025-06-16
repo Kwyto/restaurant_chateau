@@ -1,51 +1,14 @@
 <?php
-include '../includes/config.php';
-// Fungsi untuk menghitung total reservasi
-function countReservations($conn, $status = '', $search = '', $date = '') {
-    $query = "SELECT COUNT(*) as total FROM reservations WHERE 1=1";
-    $params = array();
-    
-    if (!empty($status)) {
-        $query .= " AND status = ?";
-        $params[] = $status;
-    }
-    
-    if (!empty($search)) {
-        $query .= " AND (reservation_number LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)";
-        $searchTerm = "%$search%";
-        $params = array_merge($params, array_fill(0, 4, $searchTerm));
-    }
-    
-    if (!empty($date)) {
-        $query .= " AND reservation_date = ?";
-        $params[] = $date;
-    }
-    
-    $stmt = mysqli_prepare($conn, $query);
-    
-    if (!empty($params)) {
-        $types = str_repeat('s', count($params));
-        mysqli_stmt_bind_param($stmt, $types, ...$params);
-    }
-    
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $row = mysqli_fetch_assoc($result);
-    
-    return $row['total'];
-}
 
-// Ambil parameter dari URL
-$status = $_GET['status'] ?? '';
+include '../includes/config.php';
+
 $search = $_GET['search'] ?? '';
-$date = $_GET['date'] ?? '';
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $perPage = 10;
 
-// Dapatkan data reservasi
-$reservations = getReservations($conn, $status, $search, $date, $page, $perPage);
-$totalReservations = countReservations($conn, $status, $search, $date);
-$totalPages = ceil($totalReservations / $perPage);
+$customers = getCustomers($conn, $search, $page, $perPage);
+$totalCustomers = countTotalCustomer($conn);
+$totalPages = ceil($totalCustomers / $perPage);
 
 ?>
 
@@ -54,7 +17,7 @@ $totalPages = ceil($totalReservations / $perPage);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reservations Dashboard</title>
+    <title>Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -65,6 +28,7 @@ $totalPages = ceil($totalReservations / $perPage);
                         primary: '#1a365d',
                         secondary: '#2c5282',
                         accent: '#ecc94b',
+                        
                     }
                 }
             }
@@ -80,7 +44,7 @@ $totalPages = ceil($totalReservations / $perPage);
                     <button class="text-gray-500 focus:outline-none md:hidden">
                         <i class="fas fa-bars"></i>
                     </button>
-                    <h1 class="ml-4 text-xl font-semibold text-gray-800">Reservations Management</h1>
+                    <h1 class="ml-4 text-xl font-semibold text-gray-800">Customers Management</h1>
                 </div>
                 <div class="flex items-center">
                     <div class="relative">
@@ -100,115 +64,79 @@ $totalPages = ceil($totalReservations / $perPage);
             <div class="flex-1 overflow-auto p-4">                
                 <!-- Filter Section -->
                 <div class="bg-white p-4 rounded-lg shadow mb-6">
-                    <form id="filter-form" method="GET" class="flex flex-wrap items-center gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                            <select name="status" class="border border-gray-300 rounded-md px-3 py-2">
-                                <option value="">All Status</option>
-                                <option value="confirmed" <?= $status === 'confirmed' ? 'selected' : '' ?>>Confirmed</option>
-                                <option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>>Pending</option>
-                                <option value="cancelled" <?= $status === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
-                            </select>
+                    <form method="GET" class="flex flex-wrap items-center gap-4">
+                        <div class="flex-grow">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Search Users</label>
+                            <div class="flex">
+                                <input type="text" name="search" placeholder="Search Users..." 
+                                    value="<?= htmlspecialchars($search) ?>" 
+                                    class="border border-gray-300 rounded-l-md px-3 py-2 w-full">
+                                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-r-md hover:bg-blue-700">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                            <input type="date" name="date" value="<?= htmlspecialchars($date) ?>" class="border border-gray-300 rounded-md px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                            <input type="text" name="search" placeholder="Search..." value="<?= htmlspecialchars($search) ?>" class="border border-gray-300 rounded-md px-3 py-2">
-                        </div>
-                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md mt-6 hover:bg-blue-700">
-                            <i class="fas fa-filter mr-2"></i>Filter
-                        </button>
-                        <button type="button" id="reset-filters" class="bg-gray-500 text-white px-4 py-2 rounded-md mt-6 hover:bg-gray-600">
-                            <i class="fas fa-sync-alt mr-2"></i>Reset
-                        </button>
                     </form>
                 </div>
                 
-                <!-- Reservations Table -->
                 <div class="bg-white rounded-lg shadow overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reservation ID</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Special Occasion</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pickup Service</th>
-
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Birthday</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Favorite Cuisines</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prefered Seating</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dietary Restrictions</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                <?php while($reservation = mysqli_fetch_assoc($reservations)): ?>
+                                <?php while($customer = mysqli_fetch_assoc($customers)): ?>
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <?= $reservation['reservation_id'] ?>
-                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                                <?= strtoupper(substr($reservation['first_name'], 0, 1)) . strtoupper(substr($reservation['last_name'], 0, 1)) ?>
+                                                <?= strtoupper(substr($customer['first_name'], 0, 1)) . strtoupper(substr($customer['last_name'], 0, 1)) ?>
                                             </div>
                                             <div class="ml-4">
                                                 <div class="text-sm font-medium text-gray-900">
-                                                    <?= htmlspecialchars($reservation['first_name'] . ' ' . $reservation['last_name']) ?>
-                                                </div>
-                                                <div class="text-sm text-gray-500">
-                                                    <?= htmlspecialchars($reservation['email']) ?>
+                                                    <?= htmlspecialchars($customer['first_name'] . ' ' . $customer['last_name']) ?>
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">
-                                            <?= date('M j, Y', strtotime($reservation['reservation_date'])) ?>
-                                        </div>
-                                        <div class="text-sm text-gray-500">
-                                            <?= date('H:i', strtotime($reservation['reservation_time'])) ?>
-                                        </div>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <?= $customer['gender'] ?? 'null' ?>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <?php 
-                                        $statusColor = [
-                                            'confirmed' => 'green',
-                                            'pending' => 'yellow',
-                                            'cancelled' => 'red'
-                                        ][$reservation['status']] ?? 'gray';
-                                        ?>
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-<?= $statusColor ?>-100 text-<?= $statusColor ?>-800">
-                                            <?= ucfirst($reservation['status']) ?>
-                                        </span>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <?= $customer['email'] ?? 'null' ?>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <?= $reservation['guests'] ?>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <?= $customer['phone'] ?? 'null' ?>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <?= $reservation['special_occasion'] ?>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <?= $customer['address'] == '' ? 'null' : $customer['address'] ?? 'null' ?>
                                     </td>
-                                    <?php 
-                                        $statusColor = [
-                                            '1' => 'green',
-                                            '0' => 'red',
-                                        ][$reservation['pickup_service']] ?? 'gray';
-                                        ?>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-<?= $statusColor ?>-100 text-<?= $statusColor ?>-800">
-                                            <?= $reservation['pickup_service'] == 1 ? 'yes' : 'no' ?>
-                                        </span>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <?= $customer['date_of_birth'] == '' ? 'null' : $customer['date_of_birth'] ?? 'null' ?>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <button onclick="viewReservation(<?= $reservation['id'] ?>)" class="text-blue-600 hover:text-blue-900 mr-3">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button onclick="deleteReservation(<?= $reservation['id'] ?>)" class="text-red-600 hover:text-red-900">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <?= $customer['favorite_cuisines'] ?? 'null' ?>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <?= $customer['preferred_seating'] ?? 'null' ?>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <?= $customer['dietary_restrictions'] ?? 'null' ?>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <?= $customer['membership_level'] ?? 'null' ?>
                                     </td>
                                 </tr>
                                 <?php endwhile; ?>
@@ -217,7 +145,7 @@ $totalPages = ceil($totalReservations / $perPage);
                     </div>
                     
                     <!-- Pagination -->
-                     <?php if ($totalPages > 1 ) : ?>
+                    <?php if($totalPages > 1) : ?>
                     <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
                         <div class="flex-1 flex justify-between sm:hidden">
                             <a href="?<?= http_build_query(array_merge($_GET, ['page' => max(1, $page - 1)])) ?>" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
@@ -230,7 +158,7 @@ $totalPages = ceil($totalReservations / $perPage);
                         <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                             <div>
                                 <p class="text-sm text-gray-700">
-                                    Showing <span class="font-medium"><?= ($page - 1) * $perPage + 1 ?></span> to <span class="font-medium"><?= min($page * $perPage, $totalReservations) ?></span> of <span class="font-medium"><?= $totalReservations ?></span> results
+                                    Showing <span class="font-medium"><?= ($page - 1) * $perPage + 1 ?></span> to <span class="font-medium"><?= min($page * $perPage, $totalCustomers) ?></span> of <span class="font-medium"><?= $totalCustomers ?></span> results
                                 </p>
                             </div>
                             <div>
@@ -431,8 +359,3 @@ $totalPages = ceil($totalReservations / $perPage);
     </script>
 </body>
 </html>
-
-<?php
-// Tutup koneksi database
-mysqli_close($conn);
-?>

@@ -143,11 +143,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             <!-- Active Status -->
                             <div class="flex items-center">
-                                <input type="checkbox" id="status" name="status"
-                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                       <?= isset($_POST['status']) ? 'checked' : 'checked' ?>>
-                                <label for="status" class="ml-2 block text-sm text-gray-700">
+                                <label for="status" class="ml-2 mr-3 block text-sm text-gray-700">
                                     Active Coupon
+                                </label>
+                                <label for="toggleExample" class="block items-center cursor-pointer">
+                                    <div class="relative">
+                                        <input id="toggleExample" type="checkbox" <?= isset($_POST['status']) ? 'checked' : 'checked' ?> class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-blue-600 transition duration-300"></div>
+                                        <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transform peer-checked:translate-x-full transition duration-300"></div>
+                                    </div>
                                 </label>
                             </div>
                             

@@ -41,12 +41,64 @@ function getUserData($conn, $userId) {
     return mysqli_fetch_assoc($result);
 }
 
-function getCustomers($conn) {
+function getCustomers($conn, $search = null, $page = 1, $perPage = 10, $limit = null) {
+    $page = max(1, (int)$page);
+    $perPage = max(1, (int)$perPage);
+    $offset = ($page - 1) * $perPage;
+
     $query = "SELECT * FROM users";
+    $params = [];
+    $types = [];
+    $conditions = [];
+
+    // Tambahkan kondisi pencarian
+    if (!empty($search)) {
+        $conditions[] = '(CONCAT(first_name, " ", last_name) LIKE ?)';
+        $params[] = '%' . $search . '%';
+        $types[] = 's';
+    }
+
+    // Gabungkan kondisi ke dalam query
+    if (!empty($conditions)) {
+        $query .= ' WHERE ' . implode(' AND ', $conditions);
+    }
+
+    // Tambahkan limit/pagination
+    if ($limit !== null) {
+        $query .= " LIMIT ?";
+        $params[] = (int)$limit;
+        $types[] = 'i';
+    } else {
+        $query .= " LIMIT ? OFFSET ?";
+        $params[] = $perPage;
+        $params[] = $offset;
+        $types[] = 'ii';
+    }
+
+    // Prepare statement
+    $stmt = mysqli_prepare($conn, $query);
+    if (!$stmt) {
+        throw new Exception("Database error: " . mysqli_error($conn));
+    }
+
+    // Bind parameters kalau ada
+    if (!empty($params)) {
+        mysqli_stmt_bind_param($stmt, implode('', $types), ...$params);
+    }
+
+    mysqli_stmt_execute($stmt);
+    return mysqli_stmt_get_result($stmt);
+}
+
+
+function countTotalCustomer($conn) {
+    $query = 'SELECT COUNT(*) AS total FROM users';
     $stmt = mysqli_prepare($conn, $query);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
-    return $result;
+    $row = mysqli_fetch_assoc($result);
+    
+    return (int)$row['total'];
 }
 
 function getReservations($conn, $status = null, $search = null, $date = null, $page = 1, $perPage = 10, $limit = null) {
@@ -57,16 +109,7 @@ function getReservations($conn, $status = null, $search = null, $date = null, $p
 
     // Query dasar dengan JOIN yang benar dan kolom spesifik
     $query = "SELECT 
-                r.id AS reservation_id,
-                r.reservation_number,
-                r.reservation_date,
-                r.reservation_time,
-                r.table_number,
-                r.ocassion,
-                r.guests,
-                r.special_request,
-                r.status,
-                r.created_at AS reservation_created,
+                r.*,
                 u.id AS user_id,
                 u.first_name,
                 u.last_name,

@@ -1,13 +1,17 @@
 <div class="hidden md:flex md:flex-shrink-0">
     <div class="flex flex-col w-64 bg-primary">
         <div class="flex items-center justify-center h-16 px-4 bg-secondary">
-            <span class="text-white text-xl font-semibold">Luxury Restaurant</span>
+            <span class="text-white text-xl font-semibold">Château Restaurant</span>
         </div>
         <div class="flex flex-col flex-grow px-4 py-4 overflow-y-hidden">
             <div class="space-y-1">
                 <a href="../dashboard/" id="dashboard-link" class="flex items-center px-2 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-secondary rounded-md group">
                     <i class="fas fa-tachometer-alt mr-3"></i>
                     Dashboard
+                </a>
+                <a href="../customers/" id="customers-link" class="flex items-center px-2 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-secondary rounded-md group">
+                    <i class="fas fa-users mr-3"></i>
+                    Customers
                 </a>
                 <a href="../reservation/" id="reservation-link" class="flex items-center px-2 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-secondary rounded-md group">
                     <i class="fas fa-calendar-alt mr-3"></i>
@@ -20,6 +24,10 @@
                 <a href="../coupons" id="coupons-link" class="flex items-center px-2 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-secondary rounded-md group">
                     <i class="fas fa-tags mr-3"></i>
                     Coupons
+                </a>
+                <a href="../membership" id="membership-link" class="flex items-center px-2 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-secondary rounded-md group">
+                    <i class="fas fa-money-bill-wave mr-3"></i>
+                    Membership
                 </a>
             </div>
         </div>
@@ -54,6 +62,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (currentPath.includes('/dashboard')) {
         document.getElementById('dashboard-link').classList.add('bg-secondary', 'text-white');
         document.getElementById('dashboard-link').classList.remove('text-gray-300');
+    } else if (currentPath.includes('/customers')) {
+        document.getElementById('customers-link').classList.add('bg-secondary', 'text-white');
+        document.getElementById('reservation-link').classList.remove('text-gray-300');
     } else if (currentPath.includes('/reservation')) {
         document.getElementById('reservation-link').classList.add('bg-secondary', 'text-white');
         document.getElementById('reservation-link').classList.remove('text-gray-300');
@@ -63,6 +74,9 @@ document.addEventListener('DOMContentLoaded', function() {
     } else if (currentPath.includes('/coupons')) {
         document.getElementById('coupons-link').classList.add('bg-secondary', 'text-white');
         document.getElementById('coupons-link').classList.remove('text-gray-300');
+    } else if (currentPath.includes('/membership')) {
+        document.getElementById('membership-link').classList.add('bg-secondary', 'text-white');
+        document.getElementById('membership-link').classList.remove('text-gray-300');
     }
 });
 </script>

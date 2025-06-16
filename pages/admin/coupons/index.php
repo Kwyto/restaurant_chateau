@@ -111,7 +111,7 @@ if ($page > $totalPages) {
                                                 <?= htmlspecialchars($item['description']) ?>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                $<?= number_format($item['discount_value'], 2) ?>
+                                                <?= ($item['discount_value']/100)*100 ?>%
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 <?= date('M d, Y', strtotime($item['expiration_date'])) ?>

@@ -165,6 +165,19 @@ if (!$coupon) {
                                 </select>
                             </div>
 
+                            <div class="flex items-center">
+                                <label for="status" class="ml-2 mr-3 block text-sm text-gray-700">
+                                    Active Coupon
+                                </label>
+                                <label for="toggleExample" class="block items-center cursor-pointer">
+                                    <div class="relative">
+                                        <input id="toggleExample" type="checkbox" <?= isset($_POST['status']) ? 'checked' : 'checked' ?> class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-blue-600 transition duration-300"></div>
+                                        <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transform peer-checked:translate-x-full transition duration-300"></div>
+                                    </div>
+                                </label>
+                            </div>
+
                             <!-- Description -->
                             <div class="md:col-span-2">
                                 <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
