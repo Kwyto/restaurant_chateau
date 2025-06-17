@@ -14,6 +14,18 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
 } elseif (strpos($current_dir, '/pages') !== false) {
     $base_path = '../';
 }
+
+$protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+$host = $_SERVER['HTTP_HOST'];
+$scriptPath = dirname($_SERVER['SCRIPT_NAME']);
+
+// Jika project ada di subfolder
+$basePath = $protocol . '://' . $host . $scriptPath . '/';
+
+// Jika project di root
+// $basePath = $protocol . '://' . $host . '/';
+
+$adminPath = $basePath . 'pages/admin/dashboard/';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -92,7 +104,7 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
                     
                     <?php if(isset($_SESSION['user_id'])): ?>
                         <?php if($_SESSION['user_role'] == 'admin') : ?>
-                            <a href="pages/admin/dashboard/" class="text-white hover:text-gold transition duration-300 relative group">
+                            <a href="<?php echo $base_path; ?>pages/admin/dashboard/" class="text-white hover:text-gold transition duration-300 relative group">
                                 Dashboard
                                 <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
                             </a>
