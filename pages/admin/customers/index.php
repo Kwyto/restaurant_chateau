@@ -46,20 +46,6 @@ $totalPages = ceil($totalCustomers / $perPage);
                     </button>
                     <h1 class="ml-4 text-xl font-semibold text-gray-800">Customers Management</h1>
                 </div>
-                <div class="flex items-center">
-                    <div class="relative">
-                        <button class="p-1 text-gray-500 rounded-full hover:text-gray-600 focus:outline-none">
-                            <i class="fas fa-bell"></i>
-                        </button>
-                        <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-                    </div>
-                    <div class="ml-4">
-                        <div class="flex items-center">
-                            <img class="w-8 h-8 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Admin profile">
-                            <span class="ml-2 text-sm font-medium text-gray-700">Admin</span>
-                        </div>
-                    </div>
-                </div>
             </div>
             <div class="flex-1 overflow-auto p-4">                
                 <!-- Filter Section -->

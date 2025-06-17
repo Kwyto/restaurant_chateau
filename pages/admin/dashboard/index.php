@@ -1,5 +1,4 @@
 <?php 
-
 session_start();
 
 if(!isset($_SESSION['user_id'])) {
@@ -11,11 +10,83 @@ if ($_SESSION['user_role'] !== 'admin') {
     exit();
 }
 
-include '../includes/config.php';
+include_once '../includes/config.php';
+
+// Get all necessary data
 $users = getCustomers($conn);
 $menu = getMenuItems($conn, limit:5);
 $reservations = getReservations($conn, limit:6);
 $coupons = getCoupon($conn, limit:3);
+
+// Calculate statistics
+$today = date('Y-m-d');
+$yesterday = date('Y-m-d', strtotime('-1 day'));
+$current_month = date('m');
+$current_year = date('Y');
+$last_month = date('m', strtotime('-1 month'));
+
+// Total reservations
+$total_reservations_query = "SELECT COUNT(*) as total FROM reservations";
+$total_reservations_result = mysqli_query($conn, $total_reservations_query);
+$total_reservations = mysqli_fetch_assoc($total_reservations_result)['total'];
+
+// Today's reservations
+$today_reservations_query = "SELECT COUNT(*) as total FROM reservations WHERE reservation_date = '$today'";
+$today_reservations_result = mysqli_query($conn, $today_reservations_query);
+$today_reservations = mysqli_fetch_assoc($today_reservations_result)['total'];
+
+// Yesterday's reservations
+$yesterday_reservations_query = "SELECT COUNT(*) as total FROM reservations WHERE reservation_date = '$yesterday'";
+$yesterday_reservations_result = mysqli_query($conn, $yesterday_reservations_query);
+$yesterday_reservations = mysqli_fetch_assoc($yesterday_reservations_result)['total'];
+
+// This month's reservations
+$month_reservations_query = "SELECT COUNT(*) as total FROM reservations 
+                            WHERE MONTH(reservation_date) = '$current_month' 
+                            AND YEAR(reservation_date) = '$current_year'";
+$month_reservations_result = mysqli_query($conn, $month_reservations_query);
+$month_reservations = mysqli_fetch_assoc($month_reservations_result)['total'];
+
+// Last month's reservations
+$last_month_reservations_query = "SELECT COUNT(*) as total FROM reservations 
+                                WHERE MONTH(reservation_date) = '$last_month' 
+                                AND YEAR(reservation_date) = '$current_year'";
+$last_month_reservations_result = mysqli_query($conn, $last_month_reservations_query);
+$last_month_reservations = mysqli_fetch_assoc($last_month_reservations_result)['total'];
+
+// Calculate percentage changes
+$reservations_percentage_change = $last_month_reservations > 0 ? 
+    round((($month_reservations - $last_month_reservations) / $last_month_reservations) * 100, 1) : 0;
+
+$today_vs_yesterday_percentage = $yesterday_reservations > 0 ? 
+    round((($today_reservations - $yesterday_reservations) / $yesterday_reservations) * 100, 1) : 0;
+
+// Revenue calculations
+// Monthly revenue
+$month_revenue_query = "SELECT SUM(total_amount) as revenue FROM reservations 
+                       WHERE MONTH(reservation_date) = '$current_month' 
+                       AND YEAR(reservation_date) = '$current_year' 
+                       AND status = 'confirmed'";
+$month_revenue_result = mysqli_query($conn, $month_revenue_query);
+$month_revenue = mysqli_fetch_assoc($month_revenue_result)['revenue'] ?? 0;
+
+// Last month revenue
+$last_month_revenue_query = "SELECT SUM(total_amount) as revenue FROM reservations 
+                           WHERE MONTH(reservation_date) = '$last_month' 
+                           AND YEAR(reservation_date) = '$current_year' 
+                           AND status = 'confirmed'";
+$last_month_revenue_result = mysqli_query($conn, $last_month_revenue_query);
+$last_month_revenue = mysqli_fetch_assoc($last_month_revenue_result)['revenue'] ?? 0;
+
+// Revenue percentage change
+$revenue_percentage_change = $last_month_revenue > 0 ? 
+    round((($month_revenue - $last_month_revenue) / $last_month_revenue) * 100, 1) : 0;
+
+// New customers this week
+$new_customers_query = "SELECT COUNT(*) as total FROM users 
+                       WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+$new_customers_result = mysqli_query($conn, $new_customers_query);
+$new_customers = mysqli_fetch_assoc($new_customers_result)['total'];
 ?>
 
 <!DOCTYPE html>
@@ -34,7 +105,6 @@ $coupons = getCoupon($conn, limit:3);
                         primary: '#1a365d',
                         secondary: '#2c5282',
                         accent: '#ecc94b',
-                        
                     }
                 }
             }
@@ -44,7 +114,7 @@ $coupons = getCoupon($conn, limit:3);
 <body class="bg-gray-100 font-sans">
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
-        <?php include '../components/sidebar.php' ?>
+        <?php include_once '../components/sidebar.php' ?>
 
         <!-- Main content -->
         <div class="flex flex-col flex-1 overflow-hidden">
@@ -55,20 +125,6 @@ $coupons = getCoupon($conn, limit:3);
                         <i class="fas fa-bars"></i>
                     </button>
                     <h1 class="ml-4 text-xl font-semibold text-gray-800">Dashboard</h1>
-                </div>
-                <div class="flex items-center">
-                    <div class="relative">
-                        <button class="p-1 text-gray-500 rounded-full hover:text-gray-600 focus:outline-none">
-                            <i class="fas fa-bell"></i>
-                        </button>
-                        <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-                    </div>
-                    <div class="ml-4">
-                        <div class="flex items-center">
-                            <img class="w-8 h-8 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Admin profile">
-                            <span class="ml-2 text-sm font-medium text-gray-700">Admin</span>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -81,14 +137,16 @@ $coupons = getCoupon($conn, limit:3);
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="text-sm font-medium text-gray-500 truncate">Total Reservations</div>
-                                <div class="mt-1 text-3xl font-semibold text-gray-900">31</div>
+                                <div class="mt-1 text-3xl font-semibold text-gray-900"><?= $total_reservations ?></div>
                             </div>
                             <div class="p-3 rounded-full bg-blue-100 text-blue-600">
                                 <i class="fas fa-calendar-alt text-xl"></i>
                             </div>
                         </div>
                         <div class="mt-4">
-                            <span class="text-green-600 text-sm font-semibold">+12%</span>
+                            <span class="<?= $reservations_percentage_change >= 0 ? 'text-green-600' : 'text-red-600' ?> text-sm font-semibold">
+                                <?= $reservations_percentage_change >= 0 ? '+' : '' ?><?= $reservations_percentage_change ?>%
+                            </span>
                             <span class="text-gray-500 text-sm ml-2">from last month</span>
                         </div>
                     </div>
@@ -98,14 +156,16 @@ $coupons = getCoupon($conn, limit:3);
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="text-sm font-medium text-gray-500 truncate">Today's Reservations</div>
-                                <div class="mt-1 text-3xl font-semibold text-gray-900">8</div>
+                                <div class="mt-1 text-3xl font-semibold text-gray-900"><?= $today_reservations ?></div>
                             </div>
                             <div class="p-3 rounded-full bg-green-100 text-green-600">
                                 <i class="fas fa-clock text-xl"></i>
                             </div>
                         </div>
                         <div class="mt-4">
-                            <span class="text-green-600 text-sm font-semibold">+3%</span>
+                            <span class="<?= $today_vs_yesterday_percentage >= 0 ? 'text-green-600' : 'text-red-600' ?> text-sm font-semibold">
+                                <?= $today_vs_yesterday_percentage >= 0 ? '+' : '' ?><?= $today_vs_yesterday_percentage ?>%
+                            </span>
                             <span class="text-gray-500 text-sm ml-2">from yesterday</span>
                         </div>
                     </div>
@@ -122,7 +182,7 @@ $coupons = getCoupon($conn, limit:3);
                             </div>
                         </div>
                         <div class="mt-4">
-                            <span class="text-green-600 text-sm font-semibold">+1</span>
+                            <span class="text-green-600 text-sm font-semibold">+<?= $new_customers ?></span>
                             <span class="text-gray-500 text-sm ml-2">new this week</span>
                         </div>
                     </div>
@@ -132,19 +192,22 @@ $coupons = getCoupon($conn, limit:3);
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="text-sm font-medium text-gray-500 truncate">Monthly Revenue</div>
-                                <div class="mt-1 text-3xl font-semibold text-gray-900">$12,345</div>
+                                <div class="mt-1 text-3xl font-semibold text-gray-900">$<?= number_format($month_revenue, 2) ?></div>
                             </div>
                             <div class="p-3 rounded-full bg-purple-100 text-purple-600">
                                 <i class="fas fa-dollar-sign text-xl"></i>
                             </div>
                         </div>
                         <div class="mt-4">
-                            <span class="text-green-600 text-sm font-semibold">+8.2%</span>
+                            <span class="<?= $revenue_percentage_change >= 0 ? 'text-green-600' : 'text-red-600' ?> text-sm font-semibold">
+                                <?= $revenue_percentage_change >= 0 ? '+' : '' ?><?= $revenue_percentage_change ?>%
+                            </span>
                             <span class="text-gray-500 text-sm ml-2">from last month</span>
                         </div>
                     </div>
                 </div>
 
+                <!-- Rest of your existing content remains the same -->
                 <!-- Recent Reservations and Menu Items -->
                 <div class="grid grid-cols-1 gap-5 mt-6 lg:grid-cols-2">
                     <!-- Recent Reservations -->
@@ -192,7 +255,7 @@ $coupons = getCoupon($conn, limit:3);
                     <div class="p-5 bg-white rounded-lg shadow">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-medium text-gray-900">Featured Menu Items</h2>
-                            <a href="#" class="text-sm font-medium text-primary hover:text-secondary">View All</a>
+                            <a href="../menu" class="text-sm font-medium text-primary hover:text-secondary">View All</a>
                         </div>
                         <div class="space-y-4">
                             <?php 
@@ -222,7 +285,7 @@ $coupons = getCoupon($conn, limit:3);
                     <div class="p-5 bg-white rounded-lg shadow">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-medium text-gray-900">Active Coupons</h2>
-                            <a href="#" class="text-sm font-medium text-primary hover:text-secondary">View All</a>
+                            <a href="../coupons/" class="text-sm font-medium text-primary hover:text-secondary">View All</a>
                         </div>
                         <div class="space-y-4">
                             <?php while($item = mysqli_fetch_assoc($coupons)) : ?>
@@ -253,7 +316,7 @@ $coupons = getCoupon($conn, limit:3);
                     <div class="p-5 bg-white rounded-lg shadow">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-medium text-gray-900">Recent Customers</h2>
-                            <a href="#" class="text-sm font-medium text-primary hover:text-secondary">View All</a>
+                            <a href="../customers/" class="text-sm font-medium text-primary hover:text-secondary">View All</a>
                         </div>
                         <div class="space-y-4">
                             <?php while($customer = mysqli_fetch_assoc($users)) : ?>

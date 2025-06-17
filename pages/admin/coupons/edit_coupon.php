@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = $_POST['description'] ?? '';
     $discount_value = $_POST['discount_value'] ?? '';
     $expiration_date = $_POST['expiration_date'] ?? '';
-    $membership_required = $_POST['membership_required'] ?? 'none';
+    $membership_required = $_POST['membership_required'] !== 'none' ? $_POST['membership_required'] : null;
 
     // Validate form data
     $errors = [];
@@ -159,7 +159,7 @@ if (!$coupon) {
                                 <label for="membership_required" class="block text-sm font-medium text-gray-700 mb-1">Membership Required</label>
                                 <select id="membership_required" name="membership_required"
                                         class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="none" <?= $coupon['membership_required'] === 'none' ? 'selected' : '' ?>>No Membership</option>
+                                    <option value='none' <?= $coupon['membership_required'] === 'none' ? 'selected' : '' ?>>No Membership</option>
                                     <option value="gold" <?= $coupon['membership_required'] === 'gold' ? 'selected' : '' ?>>Gold</option>
                                     <option value="platinum" <?= $coupon['membership_required'] === 'platinum' ? 'selected' : '' ?>>Platinum</option>
                                 </select>

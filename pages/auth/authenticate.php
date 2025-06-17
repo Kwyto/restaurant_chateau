@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['user_name'] = $user['first_name'] . ' ' . $user['last_name'];
             $_SESSION['user_email'] = $user['email'];
             $_SESSION['user_gender'] = $user['gender'];
+            $_SESSION['user_role'] = $user['role'];
             $_SESSION['user_created_at'] = $user['created_at'];
             
             // Handle remember me functionality
@@ -43,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             // Redirect to index page
             if ($user['role'] === 'admin') {
-                header("Location: ../admin/dashboard/y");
+                header("Location: ../admin/dashboard/");
             } else {
                 header("Location: ../../index.php");
             }

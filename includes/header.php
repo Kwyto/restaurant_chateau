@@ -91,6 +91,12 @@ if (strpos($current_dir, '/pages/auth') !== false || strpos($current_dir, '/page
                     </a>
                     
                     <?php if(isset($_SESSION['user_id'])): ?>
+                        <?php if($_SESSION['user_role'] == 'admin') : ?>
+                            <a href="pages/admin/dashboard/" class="text-white hover:text-gold transition duration-300 relative group">
+                                Dashboard
+                                <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>
+                            </a>
+                        <?php endif ?>
                         <a href="<?php echo $base_path; ?>pages/reservation.php" class="text-white hover:text-gold transition duration-300 relative group">
                             Reservations
                             <span class="absolute bottom-0 left-0 w-0 h-px bg-gold transition-all duration-300 group-hover:w-full"></span>

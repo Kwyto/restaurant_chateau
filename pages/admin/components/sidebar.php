@@ -1,3 +1,25 @@
+<?php
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if ($_SESSION['user_role'] !== 'admin') {
+    header("Location: ../../auth/login.php");
+    exit();
+}
+
+include_once '../includes/config.php';
+
+// Menggunakan prepared statement
+$query = 'SELECT * FROM users WHERE id = ?';
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $_SESSION['user_id']);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+?>
+
 <div class="hidden md:flex md:flex-shrink-0">
     <div class="flex flex-col w-64 bg-primary">
         <div class="flex items-center justify-center h-16 px-4 bg-secondary">
@@ -25,58 +47,50 @@
                     <i class="fas fa-tags mr-3"></i>
                     Coupons
                 </a>
-                <a href="../membership" id="membership-link" class="flex items-center px-2 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-secondary rounded-md group">
-                    <i class="fas fa-money-bill-wave mr-3"></i>
-                    Membership
-                </a>
             </div>
         </div>
         <div class="p-4 border-t border-gray-700">
             <div class="flex items-center">
-                <img class="w-10 h-10 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Admin profile">
+                <img class="w-10 h-10 rounded-full" src=<?= $user['profile_phote'] ?? "https://ui-avatars.com/api/?name=" . $user['first_name'] . ' ' . $user['last_name'] . "&background=random " ?> alt="Admin profile">
                 <div class="ml-3">
-                    <p class="text-sm font-medium text-white">Admin User</p>
-                    <p class="text-xs font-medium text-gray-300">admin@luxuryrestaurant.com</p>
+                    <p class="text-sm font-medium text-white"><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name'] ?? 'Admin User') ?></p>
+                    <p class="text-xs font-medium text-gray-300"><?= htmlspecialchars($user['email'] ?? 'admin@luxuryrestaurant.com') ?></p>
                 </div>
             </div>
-            <button class="mt-3 w-full flex items-center justify-center px-4 py-2 text-sm text-white bg-red-600 rounded-md hover:bg-red-700">
+            <a href="../../../includes/logout.php" class="mt-3 w-full flex items-center justify-center px-4 py-2 text-sm text-white bg-red-600 rounded-md hover:bg-red-700">
                 <i class="fas fa-sign-out-alt mr-2"></i>
                 Logout
-            </button>
+            </a>
         </div>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Dapatkan path URL saat ini
     const currentPath = window.location.pathname;
+    const links = {
+        'dashboard': 'dashboard-link',
+        'customers': 'customers-link',
+        'reservation': 'reservation-link',
+        'menu': 'menu-link',
+        'coupons': 'coupons-link',
+    };
     
-    // Hapus semua kelas aktif terlebih dahulu
-    document.querySelectorAll('a[id$="-link"]').forEach(link => {
+    // Reset semua link
+    Object.values(links).forEach(id => {
+        const link = document.getElementById(id);
         link.classList.remove('bg-secondary', 'text-white');
         link.classList.add('text-gray-300');
     });
     
-    // Tentukan link mana yang harus aktif berdasarkan URL
-    if (currentPath.includes('/dashboard')) {
-        document.getElementById('dashboard-link').classList.add('bg-secondary', 'text-white');
-        document.getElementById('dashboard-link').classList.remove('text-gray-300');
-    } else if (currentPath.includes('/customers')) {
-        document.getElementById('customers-link').classList.add('bg-secondary', 'text-white');
-        document.getElementById('reservation-link').classList.remove('text-gray-300');
-    } else if (currentPath.includes('/reservation')) {
-        document.getElementById('reservation-link').classList.add('bg-secondary', 'text-white');
-        document.getElementById('reservation-link').classList.remove('text-gray-300');
-    } else if (currentPath.includes('/menu')) {
-        document.getElementById('menu-link').classList.add('bg-secondary', 'text-white');
-        document.getElementById('menu-link').classList.remove('text-gray-300');
-    } else if (currentPath.includes('/coupons')) {
-        document.getElementById('coupons-link').classList.add('bg-secondary', 'text-white');
-        document.getElementById('coupons-link').classList.remove('text-gray-300');
-    } else if (currentPath.includes('/membership')) {
-        document.getElementById('membership-link').classList.add('bg-secondary', 'text-white');
-        document.getElementById('membership-link').classList.remove('text-gray-300');
+    // Aktifkan link yang sesuai
+    for (const [key, id] of Object.entries(links)) {
+        if (currentPath.includes('/'+key)) {
+            const activeLink = document.getElementById(id);
+            activeLink.classList.add('bg-secondary', 'text-white');
+            activeLink.classList.remove('text-gray-300');
+            break;
+        }
     }
 });
 </script>
