@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Handle image upload jika tidak ada error
     $imagePath = $menuItem['image_path'] ?? '';
     if (empty($errors) && isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = '../../../assets/images/menu/items/';
+        $uploadDir = '../../../assets/images/menu/';
         
         // Pastikan direktori ada
         if (!file_exists($uploadDir)) {
@@ -53,11 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Image size must be less than 2MB';
         } else {
             // Generate nama file yang unik dan aman
-            // Di bagian handle image upload, ganti kode berikut:
             $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', strtolower($name));
             $safeName = str_replace(' ', '-', $safeName); // Ganti spasi dengan dash
             $fileExt = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-            $fileName = $safeName . '.' . strtolower($fileExt);
+            $fileName = $safeName . '.' . strtolower($fileExt); // Format: nama-menu-uniqueid.ext
             $targetPath = $uploadDir . $fileName;
             
             if (move_uploaded_file($_FILES['image']['tmp_name'], $targetPath)) {
@@ -114,20 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title><?= $id > 0 ? 'Edit' : 'Add' ?> Menu Item</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#1a365d',
-                        secondary: '#2c5282',
-                        accent: '#ecc94b',
-                        
-                    }
-                }
-            }
-        }
-    </script>
     <style>
         .image-preview-container {
             transition: all 0.3s ease;

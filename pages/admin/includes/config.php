@@ -46,7 +46,7 @@ function getCustomers($conn, $search = null, $page = 1, $perPage = 10, $limit = 
     $perPage = max(1, (int)$perPage);
     $offset = ($page - 1) * $perPage;
 
-    $query = "SELECT * FROM users";
+    $query = "SELECT * FROM users WHERE role = 'user'";
     $params = [];
     $types = [];
     $conditions = [];

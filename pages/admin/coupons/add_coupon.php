@@ -7,7 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = $_POST['description'] ?? '';
     $discount_value = $_POST['discount_value'] ?? '';
     $expiration_date = $_POST['expiration_date'] ?? '';
-    $membership_required = isset($_POST['membership_required']) ? 1 : 0;
+    $membership_required = $_POST['membership_required'];
 
     // Validate and process the form
     $errors = [];
