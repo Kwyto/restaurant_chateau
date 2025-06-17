@@ -1,5 +1,7 @@
 <?php 
 include '../../includes/config.php';
+// header.php dipanggil nanti setelah semua logika selesai
+// include '../../includes/header.php'; 
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -10,10 +12,10 @@ if (!isset($_SESSION['user_id'])) {
 // Fetch user data
 $user_id = $_SESSION['user_id'];
 $query = "SELECT * FROM users WHERE id = ?";
-$stmt = mysqli_prepare($conn, $query);
-mysqli_stmt_bind_param($stmt, "i", $user_id);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
+$stmt_user = mysqli_prepare($conn, $query);
+mysqli_stmt_bind_param($stmt_user, "i", $user_id);
+mysqli_stmt_execute($stmt_user);
+$result = mysqli_stmt_get_result($stmt_user);
 $user = mysqli_fetch_assoc($result);
 
 // Fetch reservations with pagination
@@ -29,16 +31,20 @@ $total_reservations = mysqli_fetch_assoc(mysqli_stmt_get_result($count_stmt))['t
 
 $total_pages = ceil($total_reservations / $limit);
 
-// Query untuk mengambil data reservasi
-$query = "SELECT * FROM reservations 
-          WHERE user_id = ? 
-          ORDER BY reservation_date DESC, reservation_time DESC 
-          LIMIT ? OFFSET ?";
-$stmt = mysqli_prepare($conn, $query);
-mysqli_stmt_bind_param($stmt, "iii", $user_id, $limit, $offset);
-mysqli_stmt_execute($stmt);
-$reservations = mysqli_stmt_get_result($stmt);
+// Query ini tidak perlu diubah, karena r.* sudah mengambil semua data reservasi
+$query_reservations = "
+    SELECT r.*, p.payment_method, p.created_at AS payment_created_at
+    FROM reservations r
+    LEFT JOIN payments p ON r.id = p.reservation_id
+    WHERE r.user_id = ? 
+    ORDER BY r.reservation_date DESC, r.reservation_time DESC 
+    LIMIT ? OFFSET ?";
+$stmt_reservations = mysqli_prepare($conn, $query_reservations);
+mysqli_stmt_bind_param($stmt_reservations, "iii", $user_id, $limit, $offset);
+mysqli_stmt_execute($stmt_reservations);
+$reservations = mysqli_stmt_get_result($stmt_reservations);
 
+// Panggil header setelah semua logika selesai
 include '../../includes/header.php';
 ?>
 
@@ -56,22 +62,20 @@ include '../../includes/header.php';
                 <table class="min-w-full divide-y divide-gray-800">
                     <thead class="bg-gray-900">
                         <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Booked On</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Time</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Guests</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Table</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Special occasion </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-black divide-y divide-gray-800">
                         <?php while ($reservation = mysqli_fetch_assoc($reservations)): ?>
                         <tr>
+                            <td class="px-6 py-4 whitespace-nowrap"><?php echo date('M d, Y, g:i A', strtotime($reservation['created_at'])); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap"><?php echo date('F d, Y', strtotime($reservation['reservation_date'])); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap"><?php echo date('g:i A', strtotime($reservation['reservation_time'])); ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($reservation['guests']); ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap"><?php echo htmlspecialchars($reservation['table_number']); ?></td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <?php 
                                 $status_colors = ['pending' => 'bg-yellow-900 text-yellow-300', 'confirmed' => 'bg-blue-900 text-blue-300', 'completed' => 'bg-green-900 text-green-300', 'cancelled' => 'bg-red-900 text-red-300'];
@@ -80,21 +84,20 @@ include '../../includes/header.php';
                                 <span class="px-2 py-1 text-xs rounded-full <?php echo $status_color; ?>"><?php echo ucfirst(htmlspecialchars($reservation['status'])); ?></span>
                             </td>
                             <td class="px-6 py-4"><?php echo !empty($reservation['special_occasion']) ? htmlspecialchars($reservation['special_occasion']) : '<span class="text-gray-500">-</span>'; ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
                                 <a href="#" 
                                    class="text-gold hover:text-gold-dark view-reservation"
                                    data-id="<?php echo $reservation['id']; ?>"
-                                   data-guests="<?php echo htmlspecialchars($reservation['guests']); ?>"
+                                   data-guests="<?php echo htmlspecialchars($reservation['guests'] ?? ''); ?>"
                                    data-date="<?php echo date('F j, Y', strtotime($reservation['reservation_date'])); ?>"
                                    data-time="<?php echo date('g:i A', strtotime($reservation['reservation_time'])); ?>"
                                    data-occasion="<?php echo htmlspecialchars(!empty($reservation['special_occasion']) ? $reservation['special_occasion'] : 'None'); ?>"
-                                   data-table="<?php echo htmlspecialchars($reservation['table_number']); ?>"
-                                   
-                                   data-table-fee="<?php echo htmlspecialchars($reservation['table_fee'] ?? 50.00); ?>"
-                                   data-food-cost="<?php echo htmlspecialchars($reservation['food_cost'] ?? 0.00); ?>"
-                                   data-coupon-discount="<?php echo htmlspecialchars($reservation['coupon_discount'] ?? 0.00); ?>"
-                                   data-tax-amount="<?php echo htmlspecialchars($reservation['tax_amount'] ?? 0.00); ?>"
+                                   data-table="<?php echo htmlspecialchars($reservation['table_number'] ?? ''); ?>"
                                    data-total-amount="<?php echo htmlspecialchars($reservation['total_amount'] ?? 0.00); ?>"
+                                   data-payment-method="<?php echo htmlspecialchars(!empty($reservation['payment_method']) ? ucwords(str_replace('_', ' ', $reservation['payment_method'])) : 'Not Paid'); ?>"
+                                   
+                                   data-pickup-service="<?php echo htmlspecialchars($reservation['pickup_service'] ?? '0'); ?>"
+                                   data-pickup-time="<?php echo !empty($reservation['pickup_time']) ? date('g:i A', strtotime($reservation['pickup_time'])) : ''; ?>"
                                    >View</a>
                                 </td>
                         </tr>
@@ -115,7 +118,7 @@ include '../../includes/header.php';
             <?php endif; ?>
             
             <?php else: ?>
-            <div class="text-center py-8 text-gray-400"><p>Belum ada pesanan</p></div>
+            <div class="text-center py-8 text-gray-400"><p>You have no reservation history yet.</p></div>
             <?php endif; ?>
         </div>
     </div>
@@ -144,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
         button.addEventListener('click', function (e) {
             e.preventDefault();
 
-            // Mengambil data dari atribut data-*
+            // Mengambil semua data dari atribut
             const reservationId = this.dataset.id;
             const guests = this.dataset.guests;
             const date = this.dataset.date;
@@ -152,8 +155,17 @@ document.addEventListener('DOMContentLoaded', function () {
             const occasion = this.dataset.occasion;
             const table = this.dataset.table;
             const totalAmount = parseFloat(this.dataset.totalAmount);
+            const paymentMethod = this.dataset.paymentMethod;
+            const pickupService = this.dataset.pickupService; // Ambil data pickup service
+            const pickupTime = this.dataset.pickupTime;     // Ambil data pickup time
+
+            // Membuat blok HTML untuk detail pickup secara dinamis
+            let pickupDetailsHTML = `<p><strong>Pickup Service:</strong> ${pickupService == '1' ? 'Yes' : 'No'}</p>`;
+            if (pickupService == '1' && pickupTime) {
+                pickupDetailsHTML += `<p><strong>Pickup Time:</strong> ${pickupTime}</p>`;
+            }
             
-            // Konten modal disederhanakan sesuai permintaan
+            // Masukkan semua data ke dalam modal
             modalBody.innerHTML = `
                 <div class="pb-4 mb-6 border-b border-gold">
                      <div class="flex justify-between items-baseline">
@@ -169,8 +181,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         <p><strong>Guests:</strong> ${guests} people</p>
                         <p><strong>Date:</strong> ${date}</p>
                         <p><strong>Time:</strong> ${time}</p>
-                        <p><strong>Occasion:</strong> ${occasion}</p>
+                        <p><strong>Payment Method:</strong> ${paymentMethod}</p>
                         <p><strong>Table Number:</strong> ${table}</p>
+                        <hr class="border-gray-700 my-2">
+                        ${pickupDetailsHTML}
+                        <hr class="border-gray-700 my-2">
+                        <p><strong>Occasion:</strong> ${occasion}</p>
                     </div>
                 </div>
             `;
