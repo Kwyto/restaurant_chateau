@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $safeName = str_replace(' ', '-', $safeName); // Ganti spasi dengan dash
             $fileExt = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
             $fileName = $safeName . '.' . strtolower($fileExt); // Format: nama-menu-uniqueid.ext
-            $targetPath = $uploadDir . $fileName;
+            $targetPath = $uploadDir . 'items/' . $fileName;
             
             if (move_uploaded_file($_FILES['image']['tmp_name'], $targetPath)) {
                 // Hapus gambar lama jika ada
@@ -113,6 +113,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title><?= $id > 0 ? 'Edit' : 'Add' ?> Menu Item</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a365d',
+                        secondary: '#2c5282',
+                        accent: '#ecc94b',
+                        
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         .image-preview-container {
             transition: all 0.3s ease;
@@ -177,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                                <select name="category" required class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <select name="category" required class="w-full border border-gray-300 rounded-md px-3 py-2">
                                     <option value="">Select Category</option>
                                     <option value="appetizer" <?= ($menuItem['category'] ?? '') === 'appetizer' ? 'selected' : '' ?>>Appetizer</option>
                                     <option value="main" <?= ($menuItem['category'] ?? '') === 'main' ? 'selected' : '' ?>>Main Course</option>
