@@ -18,9 +18,9 @@ mysqli_stmt_execute($user_stmt);
 $user_result = mysqli_stmt_get_result($user_stmt);
 $user = mysqli_fetch_assoc($user_result);
 
-// Pengecekan jika data user tidak ditemukan (sangat disarankan)
+
 if (!$user) {
-    // Jika data user tidak ada, hancurkan session dan paksa login ulang.
+   
     session_destroy();
     header("Location: ../auth/login.php");
     exit();

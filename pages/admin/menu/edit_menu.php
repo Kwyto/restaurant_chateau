@@ -54,15 +54,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // Generate nama file yang unik dan aman
             $safeName = preg_replace('/[^a-zA-Z0-9-_]/', '-', strtolower($name));
-            $safeName = str_replace(' ', '-', $safeName); // Ganti spasi dengan dash
+            $safeName = str_replace(' ', '-', $safeName); 
             $fileExt = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
             $fileName = $safeName . '.' . strtolower($fileExt); // Format: nama-menu-uniqueid.ext
-            $targetPath = $uploadDir . $fileName;
+            $targetPath = $uploadDir . 'items/' .  $fileName;
             
             if (move_uploaded_file($_FILES['image']['tmp_name'], $targetPath)) {
                 // Hapus gambar lama jika ada
                 if (!empty($menuItem['image_path']) && file_exists($uploadDir . $menuItem['image_path'])) {
-                    @unlink($uploadDir . $menuItem['image_path']);
+                    @unlink($uploadDir . 'items/' . $menuItem['image_path']);
                 }
                 $imagePath = 'items/' . $fileName;
             } else {
@@ -113,6 +113,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title><?= $id > 0 ? 'Edit' : 'Add' ?> Menu Item</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a365d',
+                        secondary: '#2c5282',
+                        accent: '#ecc94b',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         .image-preview-container {
             transition: all 0.3s ease;
